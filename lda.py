@@ -17,9 +17,9 @@ def _setting():
     save_result_directory = "result/"
 
     num_topics: int = 7
-    task_repeat: int = 1             # 동일한 갯수의 토픽을 여러번 반복해서 진행할 경우 정수 기입
+    task_repeat: int = 15             # set_task 2일 경우, 몇 회 반복할 것인지?
 
-    # 여러개의 토픽 갯수를 구할 경우 구할 경우
+    # 여러 개의 토픽 갯수를 구할 경우
     topic_number_start: int = 2
     topic_number_end: int = 60
     topic_number_interval: int = 1
@@ -28,9 +28,10 @@ def _setting():
     random_state: int = 4190
 
     # 수행할 작업 지정
-    set_task: int = 1
-    # 1 = 지정된 토픽 갯수의 LDA model, 토픽들의 txt, html 저장
-    # 2 = 지정된 토픽 갯수 범위의 LDA model, 토픽들의 txt, html 저장
+    set_task: int = 2
+    # 1 = 지정된 토픽 갯수의 LDA model, 토픽들의 txt, 시각화된 html를 1회 저장
+    # 2 = 지정된 토픽 갯수의 LDA model, 토픽들의 txt, 시각화된 html를 n회 저장
+    # 3 = 지정된 토픽 갯수 범위의 LDA model, 토픽들의 txt, 시각화된 html를 각각 저장
 
     tokenized_article_series = openxlsx.load_series_from_xlsx(xlsx_name,
                                                               column_name,
@@ -39,8 +40,10 @@ def _setting():
 
     num_topics_range = []
     if set_task == 1:
-        num_topics_range = [num_topics for _ in range(task_repeat)]
+        num_topics_range = [num_topics]
     elif set_task == 2:
+        num_topics_range = [num_topics for _ in range(task_repeat)]
+    elif set_task == 3:
         num_topics_range = list(range(topic_number_start, topic_number_end + 1, topic_number_interval))
 
     return tokenized_article_series, iterations, random_state,\
@@ -102,10 +105,15 @@ if __name__ == '__main__':
     CORPUS, DICTIONARY = get_corpus_and_dictionary(TOKENIZED_ARTICLE_SERIES)
 
     with recorder.WithTimeRecorder('LDA 분석'):
+        initial_k = NUM_TOPICS_RANGE[0]
+
         for i in tqdm(NUM_TOPICS_RANGE):
             LDA_MODEL = get_lda_model(CORPUS, DICTIONARY, i, ITERATIONS, RANDOM_STATE)
-            save_topics_txt(LDA_MODEL, i, SAVE_RESULT_DIRECTORY + 'lda_topics_num_%d.txt' % i)
-            save_lda_html(LDA_MODEL, CORPUS, DICTIONARY, SAVE_RESULT_DIRECTORY + 'lda_html_topic_num_%d.html' % i)
-            save_lda_model(LDA_MODEL, SAVE_RESULT_DIRECTORY + 'lda_model_topic_num_%d' % i)
+            save_topics_txt(LDA_MODEL, i, SAVE_RESULT_DIRECTORY + 'lda_k_%d_rd_%d.txt' % (i, RANDOM_STATE))
+            save_lda_html(LDA_MODEL, CORPUS, DICTIONARY,
+                          SAVE_RESULT_DIRECTORY + 'lda_html_k_%d_rd_%d.html' % (i, RANDOM_STATE))
+            save_lda_model(LDA_MODEL, SAVE_RESULT_DIRECTORY + 'lda_model_k_%d_rd_%d' % (i, RANDOM_STATE))
+            if i == initial_k:
+                RANDOM_STATE += 1
 
     print('끝')
