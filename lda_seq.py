@@ -1,6 +1,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
+import statsmodels.api as sm
+import patsy
 from gensim.models import LdaSeqModel
 
 import lda
@@ -65,41 +67,80 @@ def get_lda_seq_model(tokenized_article_series, time_slice, num_topics, random_s
     return lda_seq_model
 
 
+def get_theta_for_each_article_each_topic(lda_seq_model, time_series):
+    # 각 문서별로 토픽 분포도 값 구하기
+
+    theta_value = lda_seq_model.doc_topics(0).tolist()
+    theta_values = pd.DataFrame(columns=['id'] + ['year'] + ['topic%d' % i for i in range(1, len(theta_value) + 1)])
+
+    # header만 있는 csv 파일 만들기
+    theta_values.to_csv('test/test.csv', index=False, mode='w', encoding='utf-8')
+
+    # 문서별 토픽 분포도 값 채워넣기
+    article_counter = 0
+    while True:
+        try:
+            print('%d번째 토픽~!' % article_counter)
+            theta_value = lda_seq_model.doc_topics(article_counter).tolist()
+            theta_values.loc[0] = [article_counter, time_series[article_counter], *theta_value]
+            # To-Do
+            # id 와 year가 float로 뒤에 .0이 붙음
+            # 정수로 바꾸면 깔끔할텐데 방법을 알아보자
+
+            theta_values.to_csv('test/test.csv', index=False, mode='a', encoding='utf-8', header=False)
+            article_counter += 1
+        except IndexError:
+            break
+
+
+def results_summary_to_dataframe(results):
+    # https://stackoverflow.com/questions/51734180/converting-statsmodels-summary-object-to-pandas-dataframe
+
+    results_df = pd.DataFrame({"F_value": results.fvalue,
+                               "F_p_value": results.f_pvalue,
+                               "r_squared": results.rsquared,
+                               "co_eff": results.params,
+                               "std_err": results.bse,
+                               "t_value": results.tvalues,
+                               "p_value": results.pvalues,
+                               "conf_lower": results.conf_int()[0],
+                               "conf_higher": results.conf_int()[1]
+                               }
+                              )
+
+    # 상수(Intercept) 제외 후 결과 출력
+    return results_df.drop(['Intercept'])
+
+
+def compute_each_topic_linear_regression(num_topics):
+
+    csv_df = pd.read_csv('test/test.csv')
+
+    results_df = pd.DataFrame(columns=["F_value", "F_p_value", "r_squared",
+                                       "co_eff", "std_err", "t_value", "p_value",
+                                       "conf_lower", "conf_higher"])
+    results_df.to_csv('test/test_reg_result.csv', mode='w', encoding='utf-8')
+    topic = 1
+    while True:
+        try:
+            reg_result = sm.OLS.from_formula("year ~ topic%d" % topic, csv_df).fit()
+            results_df = results_summary_to_dataframe(reg_result)
+            results_df.to_csv('test/test_reg_result.csv', mode='a', encoding='utf-8', header=False)
+
+            topic += 1
+        except patsy.PatsyError:
+            break
+
+    # 전체 목록을 보고 싶은 경우
+    # print(result.summary())
+
+
 def save_seq_topics_evolution_txt(lda_seq_model, num_topics):
     with recorder.WithTxtRecorder as recorder.sys.stdout:
         for i in num_topics:
             print('[[---- %d 번 토픽 ----]]'%i)
             lda_seq_model.print_topic_times(topic=i)
             print('\n\n')
-
-
-def get_article_influence(lda_seq_model, num_topics, time_slice: list):
-    article_list, topic_id, period, distributions = [], [], [], []
-    for topic in range(num_topics):
-        for t in range(len(time_slice)):
-            for article in range(time_slice[t]):
-                distribution = round(lda_seq_model.influences_time[t][article][topic], 4)
-                period.append(t)
-                article_list.append(article)
-                topic_id.append(topic)
-                distributions.append(distribution)
-
-    return pd.DataFrame(list(zip(article_list, topic_id, period, distributions)),
-                        columns=['article', 'topic_id', 'period', 'distribution'])
-
-
-def get_topic_distribution(lda_seq_model, num_topics, time_slice: list):
-    article_list, topic_id, distributions = [], [], []
-    df_dim = get_article_influence(lda_seq_model=lda_seq_model, num_topics=num_topics, time_slice=time_slice)
-    for article in range(0, sum(time_slice)):
-        for topic in range(0, num_topics):
-            distribution = round(lda_seq_model.gamma_[article][topic], 4)
-            article_list.append(article)
-            topic_id.append(topic)
-            distributions.append(distribution)
-
-    return pd.DataFrame(list(zip(article_list, topic_id, distributions, df_dim.period)),
-                        columns=['article', 'topic_id', 'distribution', 'period'])
 
 
 def save_topic_evolution_graph(df, save_graph_to: str = 'result/topic_evolution.png'):
@@ -132,22 +173,20 @@ def load_lda_seq_model(load_from_here: str = 'result/lda_seq_model'):
     return lda_seq_model
 
 
+def main():
+    tokenized_article_series, num_topics, iterations, random_state, \
+        save_result_directory, time_series, time_slice = _setting()
+
+    # lda_seq_model = get_lda_seq_model(tokenized_article_series, time_slice, num_topics, random_state, iterations)
+
+    # save_lda_seq_model(lda_seq_model, 'result_seq/test')
+
+    lda_seq_model = load_lda_seq_model('result_seq/test')
+
+    # get_theta_for_each_article_each_topic(lda_seq_model, time_series)
+
+    compute_each_topic_linear_regression(num_topics)
+
+
 if __name__ == '__main__':
-
-    TOKENIZED_ARTICLE_SERIES, NUM_TOPICS, ITERATIONS, RANDOM_STATE,\
-        SAVE_RESULT_DIRECTORY, TIME_SERIES, TIME_SLICE = _setting()
-
-    LDA_SEQ_MODEL = get_lda_seq_model(tokenized_article_series=TOKENIZED_ARTICLE_SERIES,
-                                      time_slice=TIME_SLICE,
-                                      num_topics=NUM_TOPICS,
-                                      random_state=RANDOM_STATE,
-                                      iterations=ITERATIONS)
-
-    DF_TOPIC_DISTRIBUTION = get_topic_distribution(lda_seq_model=LDA_SEQ_MODEL,
-                                                   num_topics=NUM_TOPICS,
-                                                   time_slice=TIME_SLICE)
-
-    DF_TOPIC_DISTRIBUTION.to_csv("result/topic_seq_df.csv", index=False)
-
-    save_topic_evolution_graph(DF_TOPIC_DISTRIBUTION, save_graph_to=SAVE_RESULT_DIRECTORY + 'topic_evolution.png')
-
+    main()
