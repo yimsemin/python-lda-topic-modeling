@@ -3,7 +3,7 @@ from tqdm import tqdm
 from konlpy.tag import Okt
 
 import util.openxlsx as openxlsx
-from stopwordlist import get_stop_words as _get_stop_words
+from stopwords.stopwordlist import get_stop_words as _get_stop_words
 
 
 def _setting():
