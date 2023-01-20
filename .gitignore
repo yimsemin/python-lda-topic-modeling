@@ -1,7 +1,10 @@
-/venv
-
 /input
 /result
 /test
+/custom_okt/my_nouns.txt
+/custom_okt/my_typos.txt
+/custom_okt/open-korean-text*
+
+__pycache__
 
 my_scratch.py
