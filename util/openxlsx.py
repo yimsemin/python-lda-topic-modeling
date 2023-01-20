@@ -1,3 +1,4 @@
+import zipfile
 import pandas as pd
 
 
@@ -30,7 +31,8 @@ def save_to_xlsx(data_to_save,
         # 데이터를 저장할 파일이 없는 경우 -> 파일 새로 만들기
         with pd.ExcelWriter(save_to_this_file, mode='w', engine='openpyxl') as writer:
             df_to_save.to_excel(writer, sheet_name=sheet_name, index=False)
-    # zipfile.BadZipFile: File is not a zip file -> 엑셀파일 삭제하고 다시 시도해볼 것
+    except zipfile.BadZipfile:
+        print('엑셀파일을 지우고 다시 시도해보세요.')
 
 
 def load_series_from_xlsx(load_from_this_file: str = 'test.xlsx',
@@ -40,17 +42,8 @@ def load_series_from_xlsx(load_from_this_file: str = 'test.xlsx',
     if sheet_name is None:
         sheet_name = 0
 
-    try:
-        f = pd.read_excel(load_from_this_file, sheet_name=sheet_name)
-        loaded_data = f[column_name].dropna()
-    except FileNotFoundError:
-        print("파일 이름 및 경로 확인 필요 -> ", load_from_this_file)
-        raise
-    except ValueError:
-        print("sheet 이름 확인 필요 -> ", sheet_name)
-    except KeyError:
-        print("column 이름 확인 필요 -> ", column_name)
-        raise
+    f = pd.read_excel(load_from_this_file, sheet_name=sheet_name)
+    loaded_data = f[column_name].dropna()
 
     if is_list_in_list is True:
         # 리스트 속 리스트 구조로 가져오기
