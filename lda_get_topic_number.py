@@ -118,17 +118,21 @@ def save_perplexity_and_coherence_graph(perplexity_values, coherence_values,
               save_result_directory + 'lda_coherence_value.png')
 
 
-if __name__ == '__main__':
-    TOKENIZED_SERIES, LOAD_MODEL_FROM, SAVE_RESULT_DIRECTORY,\
-        MIN_TOPIC_NUM, MAX_TOPIC_NUM, INTERVAL_TOPIC_NUM, SET_TASK = _setting()
+def main():
+    tokenized_series, load_model_from, save_result_directory, \
+        min_topic_num, max_topic_num, interval_topic_num, set_task = _setting()
 
-    CORPUS, DICTIONARY = lda.get_corpus_and_dictionary(TOKENIZED_SERIES)
+    corpus, dictionary = lda.get_corpus_and_dictionary(tokenized_series)
 
     with recorder.WithTimeRecorder('최적의 토픽을 구하면서 모델, 그래프, 토픽들 전부 저장합니다.'):
-        PERPLEXITY_VALUES, COHERENCE_VALUES\
-            = get_perplexity_and_coherence_value_list(TOKENIZED_SERIES, CORPUS, DICTIONARY,
-                                                      MIN_TOPIC_NUM, MAX_TOPIC_NUM, INTERVAL_TOPIC_NUM,
-                                                      SAVE_RESULT_DIRECTORY, LOAD_MODEL_FROM)
-        save_perplexity_and_coherence_graph(PERPLEXITY_VALUES, COHERENCE_VALUES,
-                                            MIN_TOPIC_NUM, MAX_TOPIC_NUM,
-                                            SAVE_RESULT_DIRECTORY, SAVE_RESULT_DIRECTORY)
+        perplexity_values, coherence_values \
+            = get_perplexity_and_coherence_value_list(tokenized_series, corpus, dictionary,
+                                                      min_topic_num, max_topic_num, interval_topic_num,
+                                                      save_result_directory, load_model_from)
+        save_perplexity_and_coherence_graph(perplexity_values, coherence_values,
+                                            min_topic_num, max_topic_num,
+                                            save_result_directory, save_result_directory)
+
+
+if __name__ == '__main__':
+    main()

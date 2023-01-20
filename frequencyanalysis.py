@@ -54,10 +54,14 @@ def frequency_analysis(preprocessed_article_series, save_to_this_file: str = 'te
         raise ValueError("결과 저장은 .xlsx 또는 .txt에만 가능합니다.")
 
 
-if __name__ == '__main__':
+def main():
     tqdm.pandas()
 
-    XLSX_NAME, COLUMN_NAME, SAVE_RESULT_TO, PREPROCESSED_ARTICLE = _setting()
+    xlsx_name, column_name, save_result_to, preprocessed_article = _setting()
 
     with recorder.WithTimeRecorder('빈도 분석'):
-        frequency_analysis(PREPROCESSED_ARTICLE, SAVE_RESULT_TO)
+        frequency_analysis(preprocessed_article, save_result_to)
+
+
+if __name__ == '__main__':
+    main()

@@ -72,14 +72,18 @@ def save_preprocessed_result(preprocessed_result,
     openxlsx.save_to_xlsx(preprocessed_result, save_result_to, column_name, sheet_name)
 
 
-if __name__ == '__main__':
+def main():
     print("전처리 작업을 시작합니다.")
 
     tqdm.pandas()
 
-    XLSX_NAME, COLUMN_NAME, SAVE_RESULT_TO = _setting()
+    xlsx_name, column_name, save_result_to = _setting()
 
-    preprocessed_article_series = noun(XLSX_NAME, COLUMN_NAME)
-    save_preprocessed_result(preprocessed_article_series, SAVE_RESULT_TO, COLUMN_NAME)
+    preprocessed_article_series = noun(xlsx_name, column_name)
+    save_preprocessed_result(preprocessed_article_series, save_result_to, column_name)
 
     print("전처리 완료")
+
+
+if __name__ == '__main__':
+    main()

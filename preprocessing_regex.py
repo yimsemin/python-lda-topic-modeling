@@ -80,13 +80,17 @@ class TextListRegexEditor:
         pass
 
 
-if __name__ == '__main__':
+def main():
     article_list = openxlsx.load_series_from_xlsx('input/6-12article.xlsx',
                                                   'article',
                                                   sheet_name='preprocessed_result',
                                                   is_list_in_list=True)
-    MY_RULE = _my_rule()
+    my_rule = _my_rule()
 
-    new_article_list = [multiple_replace(MY_RULE, ' '.join(article)) for article in article_list]
+    new_article_list = [multiple_replace(my_rule, ' '.join(article)) for article in article_list]
 
     openxlsx.save_to_xlsx(new_article_list, 'input/6-12article.xlsx', 'article', 'preprocessed_result')
+
+
+if __name__ == '__main__':
+    main()

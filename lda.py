@@ -96,24 +96,28 @@ def load_lda_model(load_from_here: str = 'result/lda_model'):
     return lda_model
 
 
-if __name__ == '__main__':
+def main():
     tqdm.pandas()
 
-    TOKENIZED_ARTICLE_SERIES, ITERATIONS, RANDOM_STATE, \
-        SAVE_RESULT_DIRECTORY, NUM_TOPICS_RANGE, SET_TASK = _setting()
+    tokenized_article_series, iterations, random_state, \
+        save_result_directory, num_topics_range, set_task = _setting()
 
-    CORPUS, DICTIONARY = get_corpus_and_dictionary(TOKENIZED_ARTICLE_SERIES)
+    corpus, dictionary = get_corpus_and_dictionary(tokenized_article_series)
 
     with recorder.WithTimeRecorder('LDA 분석'):
-        initial_k = NUM_TOPICS_RANGE[0]
+        initial_k = num_topics_range[0]
 
-        for i in tqdm(NUM_TOPICS_RANGE):
-            LDA_MODEL = get_lda_model(CORPUS, DICTIONARY, i, ITERATIONS, RANDOM_STATE)
-            save_topics_txt(LDA_MODEL, i, SAVE_RESULT_DIRECTORY + 'lda_k_%d_rd_%d.txt' % (i, RANDOM_STATE))
-            save_lda_html(LDA_MODEL, CORPUS, DICTIONARY,
-                          SAVE_RESULT_DIRECTORY + 'lda_html_k_%d_rd_%d.html' % (i, RANDOM_STATE))
-            save_lda_model(LDA_MODEL, SAVE_RESULT_DIRECTORY + 'lda_model_k_%d_rd_%d' % (i, RANDOM_STATE))
+        for i in tqdm(num_topics_range):
+            lda_model = get_lda_model(corpus, dictionary, i, iterations, random_state)
+            save_topics_txt(lda_model, i, save_result_directory + 'lda_k_%d_rd_%d.txt' % (i, random_state))
+            save_lda_html(lda_model, corpus, dictionary,
+                          save_result_directory + 'lda_html_k_%d_rd_%d.html' % (i, random_state))
+            save_lda_model(lda_model, save_result_directory + 'lda_model_k_%d_rd_%d' % (i, random_state))
             if i == initial_k:
-                RANDOM_STATE += 1
+                random_state += 1
 
     print('끝')
+
+
+if __name__ == '__main__':
+    main()
