@@ -10,44 +10,54 @@ import util.recorder as recorder
 
 
 def _setting():
-    xlsx_name: str = "input/test.xlsx"
-    column_name: str = "article"
-    sheet_name = "preprocessed_result"
+    # input
+    input_data = {
+        'xlsx_name': 'input/test.xlsx',
+        'sheet_name': 'preprocessed',
+        'column_name': 'article',
+        'load_model_dir': 'result/'
+    }
 
-    save_result_directory = "result/"
+    # output
+    output_data = {
+        'result_dir': 'result/',
+        'result_model_dir': 'result/',
+        'set_task': 2
+        # 1 = 지정된 토픽 갯수의 LDA model, 토픽들의 txt, 시각화된 html를 n회 저장
+        # 2 = 지정된 토픽 갯수 범위의 LDA model, 토픽들의 txt, 시각화된 html를 각각 저장
+    }
 
-    num_topics: int = 7
-    task_repeat: int = 15             # set_task 2일 경우, 몇 회 반복할 것인지?
+    # model setting
+    model_data = {
+        # 토픽의 갯수가 정해진 경우
+        'num_topics': 7,
+        'task_repeat': 15,
 
-    # 여러 개의 토픽 갯수를 구할 경우
-    topic_number_start: int = 2
-    topic_number_end: int = 60
-    topic_number_interval: int = 1
+        # 다양한 토픽 갯수의 모델을 구할 경우
+        'topic_number_start': 2,
+        'topic_number_end': 60,
+        'topic_number_interval': 1,
 
-    iterations: int = 20
-    random_state: int = 4190
+        # 모델 생성
+        'iterations': 20,
+        'random_state': 4190,
+    }
 
-    # 수행할 작업 지정
-    set_task: int = 2
-    # 1 = 지정된 토픽 갯수의 LDA model, 토픽들의 txt, 시각화된 html를 1회 저장
-    # 2 = 지정된 토픽 갯수의 LDA model, 토픽들의 txt, 시각화된 html를 n회 저장
-    # 3 = 지정된 토픽 갯수 범위의 LDA model, 토픽들의 txt, 시각화된 html를 각각 저장
-
-    tokenized_article_series = openxlsx.load_series_from_xlsx(xlsx_name,
-                                                              column_name,
-                                                              sheet_name=sheet_name,
+    tokenized_article_series = openxlsx.load_series_from_xlsx(input_data['xlsx_name'],
+                                                              input_data['column_name'],
+                                                              input_data['sheet_name'],
                                                               is_list_in_list=True)
 
-    num_topics_range = []
-    if set_task == 1:
-        num_topics_range = [num_topics]
-    elif set_task == 2:
-        num_topics_range = [num_topics for _ in range(task_repeat)]
-    elif set_task == 3:
-        num_topics_range = list(range(topic_number_start, topic_number_end + 1, topic_number_interval))
+    topic_number_range_dic = {
+        # set_task 값에 따라 작업 범위가 달라짐
+        1: [output_data['num_topics'] for _ in range(output_data['task_repeat'])],
+        2: list(range(output_data['topic_number_start'],
+                      output_data['topic_number_end'] + 1,
+                      output_data['topic_number_interval']))
+    }
+    output_data['topic_number_range'] = topic_number_range_dic[output_data['set_task']]
 
-    return tokenized_article_series, iterations, random_state,\
-        save_result_directory, num_topics_range, set_task
+    return input_data, output_data, model_data, tokenized_article_series
 
 
 def get_corpus_and_dictionary(tokenized_article_series):
@@ -60,9 +70,9 @@ def get_corpus_and_dictionary(tokenized_article_series):
     return corpus, dictionary
 
 
-def get_lda_model(corpus, dictionary, how_many_topic: int, iterations: int = 100, random_state: int = 4190):
+def get_lda_model(corpus, dictionary, num_topics: int, iterations: int = 100, random_state: int = 4190):
     lda_model = LdaModel(corpus,
-                         num_topics=how_many_topic,
+                         num_topics=num_topics,
                          id2word=dictionary,
                          passes=20,
                          iterations=iterations,
@@ -72,6 +82,7 @@ def get_lda_model(corpus, dictionary, how_many_topic: int, iterations: int = 100
 
 
 def save_topics_txt(lda_model, num_topics, save_result_to: str = 'result/lda_topics.txt'):
+    # TODO csv 저장으로 바꾸기
     # LDA 모델의 토픽 리스트를 텍스트파일로 저장
 
     topics = lda_model.print_topics(num_topics=num_topics, num_words=10)
@@ -97,22 +108,23 @@ def load_lda_model(load_from_here: str = 'result/lda_model'):
 
 
 def main():
+    # setting
     tqdm.pandas()
-
-    tokenized_article_series, iterations, random_state, \
-        save_result_directory, num_topics_range, set_task = _setting()
+    _, output_data, model_data, tokenized_article_series = _setting()
 
     corpus, dictionary = get_corpus_and_dictionary(tokenized_article_series)
+    iterations, random_state = model_data['iterations'], model_data['random_state']
 
+    # LDA modeling + save model
     with recorder.WithTimeRecorder('LDA 분석'):
-        initial_k = num_topics_range[0]
-
-        for i in tqdm(num_topics_range):
+        initial_k = output_data['topic_number_range'][0]
+        for i in tqdm(output_data['topic_number_range']):
             lda_model = get_lda_model(corpus, dictionary, i, iterations, random_state)
-            save_topics_txt(lda_model, i, save_result_directory + 'lda_k_%d_rd_%d.txt' % (i, random_state))
-            save_lda_html(lda_model, corpus, dictionary,
-                          save_result_directory + 'lda_html_k_%d_rd_%d.html' % (i, random_state))
-            save_lda_model(lda_model, save_result_directory + 'lda_model_k_%d_rd_%d' % (i, random_state))
+            save_lda_model(lda_model, output_data['result_model_dir'] + f'lda_k_{i}_rd_{random_state}')
+            save_topics_txt(lda_model, i, output_data['result_dir'] + f'lda_k_{i}_rd_{random_state}.txt')
+            save_lda_html(lda_model, corpus, dictionary, output_data['result_dir'] + f'lda_k_{i}_rd_{random_state}.html')
+
+            # 동일한 토픽갯수를 반복 작업할 경우 random_state를 수정
             if i == initial_k:
                 random_state += 1
 
