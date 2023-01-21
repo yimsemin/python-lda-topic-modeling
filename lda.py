@@ -51,11 +51,11 @@ def _setting():
     topic_number_range_dic = {
         # set_task 값에 따라 작업 범위가 달라짐
         1: [output_data['num_topics'] for _ in range(output_data['task_repeat'])],
-        2: list(range(output_data['topic_number_start'],
-                      output_data['topic_number_end'] + 1,
-                      output_data['topic_number_interval']))
+        2: list(range(model_data['topic_number_start'],
+                      model_data['topic_number_end'] + 1,
+                      model_data['topic_number_interval']))
     }
-    output_data['topic_number_range'] = topic_number_range_dic[output_data['set_task']]
+    output_data['topic_number_list'] = topic_number_range_dic[output_data['set_task']]
 
     return input_data, output_data, model_data, tokenized_article_series
 
@@ -117,8 +117,8 @@ def main():
 
     # LDA modeling + save model
     with recorder.WithTimeRecorder('LDA 분석'):
-        initial_k = output_data['topic_number_range'][0]
-        for i in tqdm(output_data['topic_number_range']):
+        initial_k = output_data['topic_number_list'][0]
+        for i in tqdm(output_data['topic_number_list']):
             lda_model = get_lda_model(corpus, dictionary, i, iterations, random_state)
             save_lda_model(lda_model, output_data['result_model_dir'] + f'lda_k_{i}_rd_{random_state}')
             save_topics_txt(lda_model, i, output_data['result_dir'] + f'lda_k_{i}_rd_{random_state}.txt')
