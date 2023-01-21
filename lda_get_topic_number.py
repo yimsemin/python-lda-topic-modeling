@@ -9,25 +9,42 @@ import util.recorder as recorder    # 자체 제작 py
 
 
 def _setting():
-    xlsx_name = "input/6-12article.xlsx"
-    column_name = 'article'
-    sheet_name = "preprocessed_result"
+    # input
+    input_data = {
+        'xlsx_name': 'input/test.xlsx',
+        'sheet_name': 'preprocessed',
+        'column_name': 'article',
+        'load_model_dir': 'result/'
+    }
 
-    load_model_from: str = "result/lda_model_topic_num_"
-    save_result_directory = "result/"
+    # output
+    output_data = {
+        'result_dir': 'result/',
+        'result_model_dir': 'result/'
+    }
 
-    min_topic_num: int = 2
-    max_topic_num: int = 60
-    interval_topic_num: int = 1
+    # model setting
+    model_data = {
+        # 범위
+        'topic_number_start': 2,
+        'topic_number_end': 60,
+        'topic_number_interval': 1,
 
-    # 수행할 작업 지정
-    set_task: int = 1
-    # 1 =
+        # 모델 생성
+        'iterations': 20,
+        'random_state': 4190
+    }
 
-    tokenized_series = openxlsx.load_series_from_xlsx(xlsx_name, column_name, sheet_name, is_list_in_list=True)
+    tokenized_article_series = openxlsx.load_series_from_xlsx(input_data['xlsx_name'],
+                                                              input_data['column_name'],
+                                                              input_data['sheet_name'],
+                                                              is_list_in_list=True)
 
-    return tokenized_series, load_model_from, save_result_directory,\
-        min_topic_num, max_topic_num, interval_topic_num, set_task
+    model_data['topic_number_list'] = list(range(model_data['topic_number_start'],
+                                                  model_data['topic_number_end'] + 1,
+                                                  model_data['topic_number_interval']))
+
+    return input_data, output_data, model_data, tokenized_article_series
 
 
 def get_perplexity(lda_model, corpus):
@@ -38,13 +55,13 @@ def get_perplexity(lda_model, corpus):
     return lda_model.log_perplexity(corpus)
 
 
-def get_coherence(lda_model, texts, dictionary):
+def get_coherence(lda_model, tokenized_article_series, dictionary):
     # 응집도
     # 높을수록 의미론적 일관성이 높아서 좋음
     # 일정 수준 이상으로 잘 올라가지 않음, 요동치는 구간의 시작점을 보는 듯
 
     coherence_model_lda = CoherenceModel(model=lda_model,
-                                         texts=texts,
+                                         texts=tokenized_article_series,
                                          dictionary=dictionary,
                                          coherence='c_v',
                                          topn=10)
@@ -52,6 +69,29 @@ def get_coherence(lda_model, texts, dictionary):
     coherence_score = coherence_model_lda.get_coherence()
 
     return coherence_score
+
+
+def get_perplexity_and_coherence_value_list(tokenized_article_series, corpus, dictionary,
+                                            topic_number_list, iterations: int = 100, random_state: int = 4190,
+                                            load_model_dir: str = 'result/',
+                                            result_dir: str = 'result/',
+                                            result_model_dir: str = 'result/'):
+    perplexity_values = []
+    coherence_values = []
+
+    for i in tqdm(topic_number_list):
+        try:
+            lda_model = lda.load_lda_model(load_model_dir + f'lda_k_{i}_rd_{random_state}')
+        except FileNotFoundError:
+            print(f'>> 토픽 갯수 {i}개의 lda_model을 새로 생성합니다.')
+            lda_model = lda.get_lda_model(corpus, dictionary, i, iterations, random_state)
+            lda.save_lda_model(lda_model, result_model_dir + f'lda_k_{i}_rd_{random_state}')
+            lda.save_lda_html(lda_model, corpus, dictionary, result_dir + f'lda_k_{i}_rd_{random_state}.html')
+
+        perplexity_values.append(get_perplexity(lda_model, corpus))
+        coherence_values.append(get_coherence(lda_model, tokenized_article_series, dictionary))
+
+    return perplexity_values, coherence_values
 
 
 def draw_plot(plot_body, range_start: int = 2, range_end: int = 15,
@@ -70,68 +110,41 @@ def draw_plot(plot_body, range_start: int = 2, range_end: int = 15,
     plt.clf()
 
 
-def get_perplexity_and_coherence_value_list(tokenized_series, corpus, dictionary,
-                                            min_topic_num: int = 2, max_topic_num: int = 15,
-                                            interval_topic_num: int = 1,
-                                            save_result_directory: str = 'result/',
-                                            load_model_from: str = 'result/lda_model_'):
-    perplexity_values = []
-    coherence_values = []
-
-    for i in tqdm(range(min_topic_num, max_topic_num + 1, interval_topic_num)):
-        try:
-            lda_model = lda.load_lda_model(load_model_from + '%d' % i)
-        except FileNotFoundError:
-            print('>> 토픽 갯수 %d개의 lda_model을 새로 생성합니다.' % i)
-            lda_model = lda.get_lda_model(corpus, dictionary, how_many_topic=i)
-            lda.save_lda_model(lda_model, save_result_directory + 'lda_model_topic_number_%d' % i)
-            lda.save_lda_html(lda_model, corpus, dictionary,
-                              save_result_directory + 'lda_html_topic_number_%d.html' % i)
-
-        perplexity_values.append(get_perplexity(lda_model, corpus))
-        coherence_values.append(get_coherence(lda_model, tokenized_series, dictionary))
-
-    with recorder.WithTxtRecorder(save_result_directory + 'lda_perplexity_value.txt') as recorder.sys.stdout:
-        print(*perplexity_values, sep='\n')
-    with recorder.WithTxtRecorder(save_result_directory + 'lda_coherence_values.txt') as recorder.sys.stdout:
-        print(*coherence_values, sep='\n')
-
-    return perplexity_values, coherence_values
-
-
 def save_perplexity_and_coherence_graph(perplexity_values, coherence_values,
-                                        min_topic_num: int = 2, max_topic_num: int = 15,
-                                        save_result_directory: str = 'result/',
-                                        load_value_directory: str = None):
+                                        topic_number_list, result_dir: str = 'result/'):
 
-    if perplexity_values is None:
-        with open(load_value_directory + 'lda_perplexity_value.txt') as f:
-            perplexity_values = f.readlines()
+    draw_plot(perplexity_values, topic_number_list[0], topic_number_list[-1], 'Number of topics', 'Perplexity score',
+              result_dir + 'lda__perplexity_value.png')
+    draw_plot(coherence_values, topic_number_list[0], topic_number_list[-1], 'Number of topics', 'Coherence value',
+              result_dir + 'lda__coherence_value.png')
 
-    if coherence_values is None:
-        with open(load_value_directory + 'lda_coherence_value.txt') as f:
-            coherence_values = f.readlines()
 
-    draw_plot(perplexity_values, min_topic_num, max_topic_num + 1, 'Number of topics', 'Perplexity score',
-              save_result_directory + 'lda_perplexity_value.png')
-    draw_plot(coherence_values, min_topic_num, max_topic_num + 1, 'Number of topics', 'Coherence value',
-              save_result_directory + 'lda_coherence_value.png')
+def save_perplexity_and_coherence_xlsx():
+    # TODO
+    pass
 
 
 def main():
-    tokenized_series, load_model_from, save_result_directory, \
-        min_topic_num, max_topic_num, interval_topic_num, set_task = _setting()
+    input_data, output_data, model_data, tokenized_article_series = _setting()
 
-    corpus, dictionary = lda.get_corpus_and_dictionary(tokenized_series)
+    corpus, dictionary = lda.get_corpus_and_dictionary(tokenized_article_series)
+    iterations, random_state = model_data['iterations'], model_data['random_state']
 
-    with recorder.WithTimeRecorder('최적의 토픽을 구하면서 모델, 그래프, 토픽들 전부 저장합니다.'):
+    with recorder.WithTimeRecorder('모델, 그래프, 토픽들 전부 저장합니다.'):
         perplexity_values, coherence_values \
-            = get_perplexity_and_coherence_value_list(tokenized_series, corpus, dictionary,
-                                                      min_topic_num, max_topic_num, interval_topic_num,
-                                                      save_result_directory, load_model_from)
+            = get_perplexity_and_coherence_value_list(tokenized_article_series, corpus, dictionary,
+                                                      model_data['topic_number_list'], iterations, random_state,
+                                                      input_data['load_model_dir'],
+                                                      output_data['result_dir'],
+                                                      output_data['result_model_dir'])
+
+        with recorder.WithTxtRecorder(output_data['result_dir'] + 'lda__perplexity_values.txt') as recorder.sys.stdout:
+            print(*perplexity_values, sep='\n')
+        with recorder.WithTxtRecorder(output_data['result_dir'] + 'lda__coherence_values.txt') as recorder.sys.stdout:
+            print(*coherence_values, sep='\n')
+
         save_perplexity_and_coherence_graph(perplexity_values, coherence_values,
-                                            min_topic_num, max_topic_num,
-                                            save_result_directory, save_result_directory)
+                                            model_data['topic_number_list'], output_data['result_dir'])
 
 
 if __name__ == '__main__':
