@@ -4,6 +4,29 @@ from itertools import islice
 import util.openxlsx as openxlsx
 
 
+def _setting():
+    # input
+    input_data = {
+        'xlsx_name': 'input/test_preprocessed.xlsx',
+        'sheet_name': 'preprocessed',
+        'column_name': 'article',
+    }
+
+    # output
+    output_data = {
+        'result_xlsx_name': 'input/test_preprocessed.xlsx',
+        'result_sheet_name': 'preprocessed',
+        'result_column_name': 'article'
+    }
+
+    article_series = openxlsx.load_series_from_xlsx(input_data['xlsx_name'],
+                                                    input_data['column_name'],
+                                                    input_data['sheet_name'],
+                                                    is_list_in_list=True)
+
+    return input_data, output_data, article_series
+
+
 def _my_rule():
     rule_dict = {
         '대해': ' ', '관련': ' ', '대한': ' ', '위해': ' ', '통해': ' ', '라며': ' ', '기자': ' ',
@@ -81,15 +104,18 @@ class TextListRegexEditor:
 
 
 def main():
-    article_list = openxlsx.load_series_from_xlsx('input/6-12article.xlsx',
-                                                  'article',
-                                                  sheet_name='preprocessed_result',
-                                                  is_list_in_list=True)
+    # setting
+    _, output_data, article_series = _setting()
     my_rule = _my_rule()
 
-    new_article_list = [multiple_replace(my_rule, ' '.join(article)) for article in article_list]
+    # preprocess with regex rule
+    new_article_series = [multiple_replace(my_rule, ' '.join(article)) for article in article_series]
 
-    openxlsx.save_to_xlsx(new_article_list, 'input/6-12article.xlsx', 'article', 'preprocessed_result')
+    # save result
+    openxlsx.save_to_xlsx(new_article_series,
+                          output_data['result_xlsx_name'],
+                          output_data['result_column_name'],
+                          output_data['result_sheet_name'])
 
 
 if __name__ == '__main__':

@@ -7,15 +7,33 @@ from stopwords.stopwordlist import get_stop_words as _get_stop_words
 
 
 def _setting():
-    xlsx_name = "input/12article.xlsx"
-    column_name = "article"
-    save_result_to = "input/12article.xlsx"
+    # input
+    input_data = {
+        'xlsx_name': 'input/test.xlsx',
+        'sheet_name': 0,
+        'column_name': 'article',
+    }
 
-    return xlsx_name, column_name, save_result_to
+    # output
+    output_data = {
+        'result_xlsx_name': 'input/test_preprocessed.xlsx',
+        'result_sheet_name': 'preprocessed',
+        'result_column_name': 'article'
+    }
+
+    return input_data, output_data
 
 
-def extract_noun_from_each_article(article_series):
-    print("명사만을 추출합니다.")
+def extract_noun_for_each_article(article_series):
+    """ series의 각 열을 Okt() 기반으로 명사만 추출
+
+    Args:
+        article_series: 한 줄에 문서 하나씩
+
+    Returns:
+        series: 한 줄에 명사만 추출된 문서 하나씩
+
+    """
 
     okt = Okt()
 
@@ -28,13 +46,22 @@ def extract_noun_from_each_article(article_series):
 
 
 def remove_stop_words_from_each_article(article_series):
-    print("사전을 기준으로 불용어를 제거합니다.")
+    """ series의 각 열에서 불용어 제거
+
+    Args:
+        article_series: 한 줄에 문서 하나씩
+
+    Returns:
+        series: 한 줄에 불용어 제거된 문서 하나씩
+
+    """
 
     stop_words_set = set(_get_stop_words())
 
     try:
         result = article_series.progress_map(lambda x: [word for word in x if word not in stop_words_set])
         # result = article_series.apply(lambda x: [word for word in x if word not in stop_words_set])
+        # TODO 속도 비교해보기
     except AttributeError:      # tqdm.pandas()가 선언 안된 경우
         result = article_series.map(lambda x: [word for word in x if word not in stop_words_set])
 
@@ -42,7 +69,15 @@ def remove_stop_words_from_each_article(article_series):
 
 
 def remove_one_character_from_each_article(article_series):
-    print("한 글자 단어를 제거합니다.")
+    """ series의 각 열에서 한 글자인 단어 제거
+
+    Args:
+        article_series: 한 줄에 문서 하나씩
+
+    Returns:
+        series: 한 줄에 한 글자 단어가 제거된 문서 하나씩
+
+    """
 
     try:
         result = article_series.progress_map(lambda line: [word for word in line if len(word) > 1])
@@ -52,35 +87,42 @@ def remove_one_character_from_each_article(article_series):
     return result
 
 
-def noun(xlsx_name: str = 'test.xlsx', column_name: str = 'article'):
-    print(">>전처리 작업: 명사 추출")
+def noun(xlsx_name: str = 'test.xlsx', sheet_name=None, column_name: str = 'article'):
+    """
 
-    article_series = openxlsx.load_series_from_xlsx(xlsx_name, column_name, sheet_name=0)
-    article_series = extract_noun_from_each_article(article_series)
-    article_series = remove_one_character_from_each_article(article_series)
-    article_series = remove_stop_words_from_each_article(article_series)
+    Args:
+        xlsx_name: input
+        sheet_name: input
+        column_name: input
 
-    print(">>전처리 작업 완료")
+    Returns:
+        series: 명사 추출 -> 불용어 제거 -> 한글자 제거
 
-    return article_series
+    """
+    if sheet_name is None:
+        sheet_name = 0
 
+    article_series = openxlsx.load_series_from_xlsx(xlsx_name, column_name, sheet_name)
+    tokenized_article_series = extract_noun_for_each_article(article_series)
+    tokenized_article_series = remove_stop_words_from_each_article(tokenized_article_series)
+    tokenized_article_series = remove_one_character_from_each_article(tokenized_article_series)
 
-def save_preprocessed_result(preprocessed_result,
-                             save_result_to: str,
-                             column_name,
-                             sheet_name: str = 'preprocessed_result'):
-    openxlsx.save_to_xlsx(preprocessed_result, save_result_to, column_name, sheet_name)
+    return tokenized_article_series
 
 
 def main():
-    print("전처리 작업을 시작합니다.")
-
+    # setting
     tqdm.pandas()
+    input_data, output_data = _setting()
 
-    xlsx_name, column_name, save_result_to = _setting()
+    # preprocess - Noun
+    tokenized_article_series = noun(input_data['xlsx_name'], input_data['column_name'])
 
-    preprocessed_article_series = noun(xlsx_name, column_name)
-    save_preprocessed_result(preprocessed_article_series, save_result_to, column_name)
+    # save result
+    openxlsx.save_to_xlsx(tokenized_article_series,
+                          output_data['result_xlsx_name'],
+                          output_data['result_column_name'],
+                          output_data['result_sheet_name'])
 
     print("전처리 완료")
 
