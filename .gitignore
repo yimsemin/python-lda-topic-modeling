@@ -1,7 +1,12 @@
-/venv
-
 /input
 /result
+/result_seq
 /test
+/custom_okt/my_nouns.txt
+/custom_okt/my_typos.txt
+/custom_okt/open-korean-text*
+/stopwords/stopwordlist.txt
+
+__pycache__
 
 my_scratch.py
