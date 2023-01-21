@@ -13,8 +13,7 @@ def _setting():
     input_data = {
         'xlsx_name': 'input/test.xlsx',
         'sheet_name': 'preprocessed',
-        'column_name': 'article',
-        'load_model_dir': 'result/'
+        'column_name': 'article'
     }
 
     # output
@@ -41,8 +40,8 @@ def _setting():
                                                               is_list_in_list=True)
 
     model_data['topic_number_list'] = list(range(model_data['topic_number_start'],
-                                                  model_data['topic_number_end'] + 1,
-                                                  model_data['topic_number_interval']))
+                                                 model_data['topic_number_end'] + 1,
+                                                 model_data['topic_number_interval']))
 
     return input_data, output_data, model_data, tokenized_article_series
 
@@ -73,19 +72,18 @@ def get_coherence(lda_model, tokenized_article_series, dictionary):
 
 def get_perplexity_and_coherence_value_list(tokenized_article_series, corpus, dictionary,
                                             topic_number_list, iterations: int = 100, random_state: int = 4190,
-                                            load_model_dir: str = 'result/',
-                                            result_dir: str = 'result/',
-                                            result_model_dir: str = 'result/'):
+                                            model_dir: str = 'result/',
+                                            result_dir: str = 'result/'):
     perplexity_values = []
     coherence_values = []
 
     for i in tqdm(topic_number_list):
         try:
-            lda_model = lda.load_lda_model(load_model_dir + f'lda_k_{i}_rd_{random_state}')
+            lda_model = lda.LdaModel.load(model_dir + f'lda_k_{i}_rd_{random_state}')
         except FileNotFoundError:
             print(f'>> 토픽 갯수 {i}개의 lda_model을 새로 생성합니다.')
             lda_model = lda.get_lda_model(corpus, dictionary, i, iterations, random_state)
-            lda.save_lda_model(lda_model, result_model_dir + f'lda_k_{i}_rd_{random_state}')
+            lda_model.save(model_dir + f'lda_k_{i}_rd_{random_state}')
             lda.save_lda_html(lda_model, corpus, dictionary, result_dir + f'lda_k_{i}_rd_{random_state}.html')
 
         perplexity_values.append(get_perplexity(lda_model, corpus))
@@ -125,18 +123,19 @@ def save_perplexity_and_coherence_xlsx():
 
 
 def main():
-    input_data, output_data, model_data, tokenized_article_series = _setting()
+    # setting
+    _, output_data, model_data, tokenized_article_series = _setting()
 
     corpus, dictionary = lda.get_corpus_and_dictionary(tokenized_article_series)
     iterations, random_state = model_data['iterations'], model_data['random_state']
 
+    # LDA modeling + save result
     with recorder.WithTimeRecorder('모델, 그래프, 토픽들 전부 저장합니다.'):
         perplexity_values, coherence_values \
             = get_perplexity_and_coherence_value_list(tokenized_article_series, corpus, dictionary,
                                                       model_data['topic_number_list'], iterations, random_state,
-                                                      input_data['load_model_dir'],
-                                                      output_data['result_dir'],
-                                                      output_data['result_model_dir'])
+                                                      output_data['result_model_dir'],
+                                                      output_data['result_dir'])
 
         with recorder.WithTxtRecorder(output_data['result_dir'] + 'lda__perplexity_values.txt') as recorder.sys.stdout:
             print(*perplexity_values, sep='\n')

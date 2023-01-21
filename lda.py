@@ -97,14 +97,6 @@ def save_lda_html(lda_model, corpus, dictionary, save_result_to: str = 'result/l
     pyLDAvis.save_html(output, save_result_to)
 
 
-def save_lda_model(lda_model, save_to_here: str = 'result/lda_model'):
-    lda_model.save(save_to_here)
-
-
-def load_lda_model(load_from_here: str = 'result/lda_model'):
-    return LdaModel.load(load_from_here)
-
-
 def main():
     # setting
     tqdm.pandas()
@@ -118,7 +110,7 @@ def main():
         initial_k = model_data['topic_number_list'][0]
         for i in tqdm(model_data['topic_number_list']):
             lda_model = get_lda_model(corpus, dictionary, i, iterations, random_state)
-            save_lda_model(lda_model, output_data['result_model_dir'] + f'lda_k_{i}_rd_{random_state}')
+            lda_model.save(output_data['result_model_dir'] + f'lda_k_{i}_rd_{random_state}')
             save_topics_txt(lda_model, i, output_data['result_dir'] + f'lda_k_{i}_rd_{random_state}.txt')
             save_lda_html(lda_model, corpus, dictionary, output_data['result_dir'] + f'lda_k_{i}_rd_{random_state}.html')
 
