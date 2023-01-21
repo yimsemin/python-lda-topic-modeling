@@ -14,8 +14,7 @@ def _setting():
     input_data = {
         'xlsx_name': 'input/test.xlsx',
         'sheet_name': 'preprocessed',
-        'column_name': 'article',
-        'load_model_dir': 'result/'
+        'column_name': 'article'
     }
 
     # output
@@ -103,8 +102,7 @@ def save_lda_model(lda_model, save_to_here: str = 'result/lda_model'):
 
 
 def load_lda_model(load_from_here: str = 'result/lda_model'):
-    lda_model = LdaModel.load(load_from_here)
-    return lda_model
+    return LdaModel.load(load_from_here)
 
 
 def main():
