@@ -42,8 +42,8 @@ def load_series_from_xlsx(load_from_this_file: str = 'test.xlsx',
     if sheet_name is None:
         sheet_name = 0
 
-    f = pd.read_excel(load_from_this_file, sheet_name=sheet_name)
-    loaded_data = f[column_name].dropna()
+    loaded_data = pd.read_excel(load_from_this_file, sheet_name=sheet_name)[column_name]
+    # loaded_data = f[column_name].dropna()
 
     if is_list_in_list is True:
         # 리스트 속 리스트 구조로 가져오기

@@ -16,7 +16,7 @@ def _setting():
 
     # output
     output_data = {
-        'result_xlsx_name': 'input/test_preprocessed.xlsx',
+        'result_xlsx_name': 'input/test.xlsx',
         'result_sheet_name': 'preprocessed',
         'result_column_name': 'article'
     }
@@ -60,8 +60,6 @@ def remove_stop_words_from_each_article(article_series):
 
     try:
         result = article_series.progress_map(lambda x: [word for word in x if word not in stop_words_set])
-        # result = article_series.apply(lambda x: [word for word in x if word not in stop_words_set])
-        # TODO 속도 비교해보기
     except AttributeError:      # tqdm.pandas()가 선언 안된 경우
         result = article_series.map(lambda x: [word for word in x if word not in stop_words_set])
 
@@ -116,7 +114,7 @@ def main():
     input_data, output_data = _setting()
 
     # preprocess - Noun
-    tokenized_article_series = noun(input_data['xlsx_name'], input_data['column_name'])
+    tokenized_article_series = noun(input_data['xlsx_name'], input_data['sheet_name'], input_data['column_name'])
 
     # save result
     openxlsx.save_to_xlsx(tokenized_article_series,

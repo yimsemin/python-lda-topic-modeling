@@ -1,4 +1,4 @@
-def get_stop_words():
+def get_stop_words() -> set:
     """ return set(stopword list)
 
     불용어 사전 불러오기(stopwordlist.txt)
@@ -10,19 +10,24 @@ def get_stop_words():
     """
     try:
         with open('stopwordlist.txt', 'r') as f:
-            stop_word_list = f.read().splitlines()
-        print(stop_word_list[0] if '#' in stop_word_list[0] else None)  # 불용어 사전 정보 출력
+            txt_lines = f.read().splitlines()
 
-        i = 0                                                           # 주석 제거
-        while '#' in stop_word_list[i]:
-            stop_word_list[i] = ''
-            i += 1
+        comments = [line for line in txt_lines if '#' in line]
+        print(comments)     # 불용어 사전 정보 출력
+
+        stop_word_list = [line for line in txt_lines if '#' not in line]
 
     except FileNotFoundError:
         stop_word_list = ['\n', '을', '를', '은', '가', '는', '이', '도', '수', '며', '고']      # 기본 불용어
 
-    return set(stop_word_list).remove('')
+    return set(stop_word_list)
+
+
+def main():
+    stopword_list = get_stop_words()
+    print('::불용어 목록::')
+    print(stopword_list)
 
 
 if __name__ == '__main__':
-    pass
+    main()

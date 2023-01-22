@@ -20,8 +20,8 @@ def _setting():
     # output
     output_data = {
         'result_dir': 'result/',
-        'result_model_dir': 'result/',
-        'set_task': 2
+        'result_model_dir': 'result/lda_model/',
+        'set_task': 1
         # 1 = 지정된 토픽 갯수의 LDA model, 토픽들의 txt, 시각화된 html를 n회 저장
         # 2 = 지정된 토픽 갯수 범위의 LDA model, 토픽들의 txt, 시각화된 html를 각각 저장
     }
@@ -29,8 +29,8 @@ def _setting():
     # model setting
     model_data = {
         # 토픽의 갯수가 정해진 경우
-        'num_topics': 7,
-        'task_repeat': 15,
+        'num_topics': 12,
+        'task_repeat': 10,
 
         # 다양한 토픽 갯수의 모델을 구할 경우
         'topic_number_start': 2,
@@ -49,7 +49,7 @@ def _setting():
 
     topic_number_range_dic = {
         # set_task 값에 따라 작업 범위가 달라짐
-        1: [output_data['num_topics'] for _ in range(output_data['task_repeat'])],
+        1: [model_data['num_topics'] for _ in range(model_data['task_repeat'])],
         2: list(range(model_data['topic_number_start'],
                       model_data['topic_number_end'] + 1,
                       model_data['topic_number_interval']))
@@ -109,8 +109,13 @@ def main():
     with recorder.WithTimeRecorder('LDA 분석'):
         initial_k = model_data['topic_number_list'][0]
         for i in tqdm(model_data['topic_number_list']):
-            lda_model = get_lda_model(corpus, dictionary, i, iterations, random_state)
-            lda_model.save(output_data['result_model_dir'] + f'lda_k_{i}_rd_{random_state}')
+            try:
+                lda_model = LdaModel.load(output_data['result_model_dir'] + f'lda_k_{i}_rd_{random_state}')
+                print("이미 모델이 있으므로 생성은 생략합니다.")
+            except FileNotFoundError:
+                lda_model = get_lda_model(corpus, dictionary, i, iterations, random_state)
+                lda_model.save(output_data['result_model_dir'] + f'lda_k_{i}_rd_{random_state}')
+
             save_topics_txt(lda_model, i, output_data['result_dir'] + f'lda_k_{i}_rd_{random_state}.txt')
             save_lda_html(lda_model, corpus, dictionary, output_data['result_dir'] + f'lda_k_{i}_rd_{random_state}.html')
 
