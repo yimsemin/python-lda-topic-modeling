@@ -16,17 +16,19 @@ def _setting():
         'xlsx_name': 'input/test.xlsx',
         'sheet_name': 'preprocessed',
         'column_name': 'article',
-        'load_seq_model_dir': 'result_seq/',
 
         # LDA_시계열 셋팅 // 데이터가 시간순으로 정렬되어있어야 함.
         'sheet_name_seq': "preprocessed",
-        'column_name_seq': "time"
+        'column_name_seq': "time",
+        'time_format': "%Y%m"
+        # https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior
+        # date 형식으로 입력되어있어야 적용됨. 기타 알수 없는 내용일 경우 텍스트 그대로 적용
     }
 
     # output
     output_data = {
         'result_dir': 'result_seq/',
-        'result_seq_model_dir': 'result_seq/',
+        'result_model_dir': 'result_seq/',
         'set_task': 1
         # 1 = Hot and Cold
         # 2 = 저장된 LDA_seq 모델을 불러와서 시각화하기
@@ -34,7 +36,7 @@ def _setting():
 
     # model setting
     model_data = {
-        'num_topics': 7,
+        'num_topics': 12,
 
         # 모델 생성
         'iterations': 20,
@@ -48,7 +50,14 @@ def _setting():
     time_series = openxlsx.load_series_from_xlsx(input_data['xlsx_name'],
                                                  input_data['column_name_seq'],
                                                  input_data['sheet_name_seq'])
-    time_slice = time_series.value_counts(sort=False).tolist()
+    try:
+        time_series = time_series.dt.strftime(input_data['time_format'])
+        print('time_format을 적용합니다')
+    except AttributeError:
+        print('datatime format이 아니므로, time_format을 적용하지는 않습니다.')
+
+    time_slice = time_series.tolist()
+    print(f'time_slice === \n{time_slice}')
 
     return input_data, output_data, model_data, tokenized_article_series, time_series, time_slice
 
@@ -66,9 +75,9 @@ def get_lda_seq_model(tokenized_article_series, time_slice, num_topics, random_s
                                 passes=20,
                                 random_state=random_state,
                                 lda_inference_max_iter=iterations,
-                                em_min_iter=10,         # default = 6
-                                em_max_iter=30,         # default = 20
-                                chunksize=120)          # default = 100
+                                em_min_iter=10,         # default = 6  10
+                                em_max_iter=30,         # default = 20  30
+                                chunksize=120)          # default = 100  120
 
     return lda_seq_model
 
@@ -147,7 +156,7 @@ def save_seq_topics_evolution_txt(lda_seq_model, num_topics):
     # TODO
     with recorder.WithTxtRecorder as recorder.sys.stdout:
         for i in num_topics:
-            print('[[---- %d 번 토픽 ----]]'%i)
+            print('[[---- %d 번 토픽 ----]]' % i)
             lda_seq_model.print_topic_times(topic=i)
             print('\n\n')
 
@@ -184,8 +193,11 @@ def main():
         lda_seq_model = LdaSeqModel.load(output_data['result_model_dir']
                                          + f'lda_k_{model_data["num_topics"]}_rd_{random_state}')
     except FileNotFoundError:
+        print('새롭게 모델을 만듭니다.')
+        print('이 작업은 시간이 꽤 오래걸립니다. 정말로...')
         lda_seq_model = get_lda_seq_model(tokenized_article_series, time_slice,
                                           model_data['num_topics'], random_state, iterations)
+        print('모델을 저장합니다.')
         lda_seq_model.save(output_data['result_model_dir'] + f'lda_k_{model_data["num_topics"]}_rd_{random_state}')
 
     # Hot and Cold
