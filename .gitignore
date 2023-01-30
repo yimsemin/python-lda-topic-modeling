@@ -1,3 +1,5 @@
+/__pycache__
+
 /input
 /result
 /result_seq
@@ -6,7 +8,8 @@
 /custom_okt/my_typos.txt
 /custom_okt/open-korean-text*
 /stopwords/stopwordlist.txt
-
-__pycache__
+/util/key.csv
 
 my_scratch.py
+test_*.py
+task_*.py
