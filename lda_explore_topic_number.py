@@ -17,20 +17,20 @@ import util.recorder as recorder
 def _setting():
     setting = {
         # input
-        'xlsx_name': 'input/test.xlsx',
+        'xlsx_name': 'test/test.xlsx',
         'sheet_name': 'preprocessed',
         'column_name': 'article',
 
         # output -- 폴더는 미리 만들어둬야 함
-        'result_dir': 'result/test/',
-        'result_model_dir': 'result/test/model/',
+        'result_dir': 'test/',
+        'result_model_dir': 'test/model/',
 
         # 조사할 토픽 갯수 범위
         'topic_number_start': 2,
         'topic_number_end': 40,
-        'topic_number_interval': 1,
+        'topic_number_interval': 1,         # 시작번호부터 n씩 증가하면서 조샇함
 
-        # 모델 생성
+        # LDA 모델 생성
         'iterations': 50,
         'random_state': 4190
     }
@@ -110,8 +110,8 @@ def get_perplexity_and_coherence_value_list(tokenized_article_series, corpus, di
                                             topic_number_list,
                                             iterations: int = 100,
                                             random_state: int = 4190,
-                                            result_dir: str = 'result/',
-                                            model_dir: str = 'result/model/') -> pd.DataFrame:
+                                            result_dir: str = 'test/',
+                                            model_dir: str = 'test/model/') -> pd.DataFrame:
     """
 
     Args:
@@ -158,7 +158,7 @@ def lda_explore_topic_number(setting: dict = None, tokenized_article_series: pd.
     if setting or tokenized_article_series is None:
         setting, tokenized_article_series = _setting()
 
-    corpus, dictionary = lda.get_corpus_and_dictionary(tokenized_article_series)
+    corpus, dictionary = lda.get_corpus_and_dictionary(tokenized_article_series, setting['result_dir'])
 
     # LDA modeling + save result
     values_df = get_perplexity_and_coherence_value_list(tokenized_article_series, corpus, dictionary,

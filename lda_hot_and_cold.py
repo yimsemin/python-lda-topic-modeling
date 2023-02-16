@@ -16,20 +16,20 @@ import util.recorder as recorder
 def _setting():
     setting = {
         # input
-        'lda_model': 'result/test/model/lda_k_12_rd_4190',
+        'lda_model': 'test/model/lda_k10_rd_4190',          # 분석할 모델명을 기술
 
-        'xlsx_name': 'input/test.xlsx',
+        'xlsx_name': 'test/test.xlsx',
         'sheet_name': 'preprocessed',
         'column_name': 'article',
 
-        'sheet_name_seq': "Sheet1",
-        'column_name_seq': "date",
+        'sheet_name_seq': "Sheet1",                         # 시계열 정보가 담긴 시트 이름
+        'column_name_seq': "date",                          # 시계열 정보가 담긴 열 제목 (첫번째 행)
         'time_format': "%Y%m",
-        # date 형식으로 입력되어 있다면 time_format의 형태로 바꿔줌. 기타 텍스트 및 숫자는 적용되지 않음
+        # 엑셀에서 '날짜' 서식으로 입력했다면, 위 date 형식으로 바꿔줌 / 필요 없다면 엑셀에서 '텍스트' 서식으로 입력할 것
         # https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior
 
         # output
-        'result_dir': 'result/test/'
+        'result_dir': 'test/'
     }
 
     lda_model = LdaModel.load(setting['lda_model'])
@@ -40,12 +40,11 @@ def _setting():
     corpus, _ = lda.get_corpus_and_dictionary(tokenized_article_series, setting['result_dir'])
 
     time_series = pd.read_excel(setting['xlsx_name'], sheet_name=setting['sheet_name_seq'])[setting['column_name_seq']]
-
     try:
         time_series = time_series.dt.strftime(setting['time_format'])
-        print('time_format을 적용합니다')
+        print('-- time_format을 적용합니다.')
     except AttributeError:
-        print('datatime format이 아니므로, time_format을 적용하지는 않습니다.')
+        print('-- datatime format이 아니므로, 입력된 값을 그대로 사용합니다.')
 
     return setting, lda_model, corpus, time_series
 
@@ -97,6 +96,30 @@ def get_theta_for_each_article_each_topic(lda_model, corpus) -> (pd.DataFrame, p
     return theta_values_df, dominant_topics_series
 
 
+def get_example_for_each_topic(f_path='test/time_and_theta.csv',
+                               save_result_to='test/example_article.txt',
+                               topic_start_num=0, topic_last_num=20):
+    # 각 토픽별 대표 문서 추출
+    # Todo time이랑 theta를 한 함수에 둘 필요가 없음... 구분 필요
+
+    df = pd.read_csv(f_path)
+
+    with recorder.WithTxtRecorder(save_result_to) as recorder.sys.stdout:
+        for i in range(topic_start_num, topic_last_num):
+            print(f'===== topic{i} =====')
+            my_series = df[f'topic{i}']
+            bbb = my_series.sort_values(ascending=False)
+            bbb = tuple(zip(bbb, bbb.index))[0:10]
+
+            new_list = []
+            for value, number in bbb:
+                new_list.append(value, number)
+
+            for value, number in bbb:
+                print(f'{number + 2}번째 기사, value = {value}')
+            print('=====\n\n')
+
+
 def get_linear_regression_results(reg_model) -> pd.DataFrame:
     """ result.summary() 에서 회귀분석이 통계적으로 유의한지 확인하는데 필요한 값들만 추출
 
@@ -141,7 +164,7 @@ def compute_each_topic_linear_regression(time_and_theta_df: pd.DataFrame, column
             break
 
     return reg_results
-함요
+
 
 def check_hot_and_cold():
     # TODO
