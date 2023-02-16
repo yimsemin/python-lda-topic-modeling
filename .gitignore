@@ -2,7 +2,6 @@
 
 /input
 /result
-/result_seq
 /test
 /custom_okt/my_nouns.txt
 /custom_okt/my_typos.txt
@@ -11,5 +10,6 @@
 /util/key.csv
 
 my_scratch.py
+memo.md
 test_*.py
 task_*.py

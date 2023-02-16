@@ -7,7 +7,7 @@ import util.openxlsx as openxlsx
 def _setting():
     # input
     input_data = {
-        'xlsx_name': 'input/test_preprocessed.xlsx',
+        'xlsx_name': 'input/test.xlsx',
         'sheet_name': 'preprocessed',
         'column_name': 'article',
     }
@@ -46,6 +46,8 @@ def multiple_simple_replace(rule_dict, text):
 
 
 def multiple_replace(rule_dict, text):
+    # https://stackoverflow.com/questions/15175142/how-can-i-do-multiple-substitutions-using-regex
+
     groups_no = [re.compile(pattern).groups for pattern in rule_dict]
 
     def repl_func(m):

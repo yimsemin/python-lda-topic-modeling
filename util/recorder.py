@@ -1,14 +1,21 @@
+""" 진행시간 또는 print()을 기록하는 class
+
+with 구문 속 작업에 대해
+1) 터미널에 기록될 내용을 텍스트 파일에 기록 - with WithTxtRecorder('output.txt', 'w') as recorder.sys.stdout:
+2) 코드 진행 시간을 기록 - with WithTimeRecorder('task_name'):
+
+"""
 import sys
+import datetime
 import time
-from datetime import timedelta as _timedelta
 
 
 class WithTxtRecorder(object):
-    """ with 구문 속 작업의 출력 결과 기록
+    """ with 구문 속 작업에 대해, 터미널에 기록 될 내용을 텍스트 파일에 기록
 
     Example:
-        with WithTxtRecorder('output.txt', 'w', 'utf-8') as recorder.sys.stdout:
-            print(result)
+        with WithTxtRecorder('output.txt', 'w') as recorder.sys.stdout:
+            print(something)
 
     """
     def __init__(self, filename: str = 'output.txt', how: str = 'w', encoding: str = 'utf-8'):
@@ -26,10 +33,10 @@ class WithTxtRecorder(object):
 
 
 class WithTimeRecorder:
-    """ with 구문 속 작업에 대한 시간 측정
+    """ with 구문 속 작업에 대해, 시간 측정
 
     Example:
-        with WithTimeRecorder('task1'):
+        with WithTimeRecorder('task_name'):
             # do something
 
     """
@@ -37,17 +44,15 @@ class WithTimeRecorder:
         self.entry = entry
 
     def __enter__(self):
-        print("[기록 시작]: ", self.entry)
         self.start_time = time.time()
-        return self.start_time
+        print(f'[기록 시작]: {self.entry}\n'
+              f' - 시작시간: {time.strftime("%Y.%m.%d - %H:%M:%S", time.localtime(self.start_time))}')
 
     def __exit__(self, *args):
-        print("[기록 끝]: ", self.entry, " 소요시간:",
-              _timedelta(seconds=time.time() - self.start_time), "\n")
-
-
-def print_now():
-    return time.strftime('%Y.%m.%d - %H:%M:%S')
+        self.end_time = time.time()
+        print(f'[기록 끝]: {self.entry}\n'
+              f' - 종료시간: {time.strftime("%H:%M:%S")}\n'
+              f' - 소요시간: {datetime.timedelta(seconds=self.end_time - self.start_time)}\n')
 
 
 if __name__ == '__main__':

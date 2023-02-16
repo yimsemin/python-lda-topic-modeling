@@ -2,7 +2,6 @@
 """
 import pandas as pd
 
-import util.openxlsx as openxlsx
 import util.recorder as recorder
 
 
@@ -12,16 +11,24 @@ def _setting():
         'xlsx_name': 'input/test.xlsx',
         'sheet_name': 'preprocessed',
         'column_name': 'article',
+        # article         <- 제목 줄
+        # 키워드,키워드,키워드,키워드 ...
+        # 키워드,키워드,키워드,키워드 ...
+        # 키워드,키워드,키워드,키워드 ...
+        # 키워드,키워드,키워드,키워드 ...
 
-        # output
-        'result_csv_name': 'result/test_frequency_analysis.csv',
-        'min_word_count': 50
+        # output -- 폴더는 미리 만들어둬야 함
+        'result_csv_name': 'result/test/frequency_analysis.csv',        # 파일이 이미 존재하면 덮어씀
+        'min_word_count': 50                                            # n회 이하 나타난 단어는 결과에서 제거
     }
 
-    tokenized_article_series = openxlsx.load_series_from_xlsx(setting['xlsx_name'],
-                                                              setting['column_name'],
-                                                              setting['sheet_name'],
-                                                              is_list_in_list=True)
+    excel_data = pd.read_excel(setting['xlsx_name'], sheet_name=setting['sheet_name'])[setting['column_name']]
+    tokenized_article_series = excel_data.map(lambda line: line.split(','), na_action='ignore')
+    # 0      [키워드, 키워드, 키워드 ...
+    # 1      [키워드, 키워드, 키워드 ...
+    # 2      [키워드, 키워드, 키워드 ...
+    # ...
+    # Name: article, Length: 000, dtype: object
 
     return setting, tokenized_article_series
 
@@ -30,7 +37,7 @@ def count_frequency(tokenized_article_series: pd.Series, min_word_count: int = 2
     """ 단어 및 빈도수를 내림차순으로 반환
 
     Args:
-        tokenized_article_series(pd.Series): 한 줄에 토큰화된 문서 하나씩
+        tokenized_article_series(pd.Series): 각 줄은 토큰으로 구성된 리스트 예: [키워드, 키워드, 키워드 ... ]
         min_word_count: 적게 등장한 단어를 결과에서 제거할 때 그 기준
 
     Returns:
@@ -42,8 +49,13 @@ def count_frequency(tokenized_article_series: pd.Series, min_word_count: int = 2
     return word_count_series[word_count_series >= min_word_count]
 
 
-def frequency_analysis_by_time_slice():
-    # TODO time_slice로 나눈 것 기준으로 빈도수 분석
+def word_cloud_analysis():
+    # TODO 워드클라우드 만들기
+    pass
+
+
+def frequency_analysis_by_group():
+    # TODO 그룹으로 나눈 것(예: time_slice) 기준으로 빈도수 분석
     pass
 
 

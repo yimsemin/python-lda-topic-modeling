@@ -13,7 +13,6 @@ from tqdm import tqdm
 from konlpy.tag import Okt
 
 import util.recorder as recorder
-import util.openxlsx as openxlsx
 from stopwords.stopwordlist import get_stop_words
 
 
@@ -23,21 +22,18 @@ def _setting():
         'xlsx_name': 'input/test.xlsx',
         'sheet_name': 0,                            # 시트 이름 str 입력 / 0 입력시 가장 왼쪽에 있는 시트를 선택함
         'column_name': 'article',
-        # 1     article         <- 제목 줄
+        # 1     article외
         # 2     1줄에 1개의 문서 ...
         # 3     1줄에 1개의 문서 ...
         # 4     1줄에 1개의 문서 ...
-        # ...                            ...
+        # ...
 
         # output
         'result_sheet_name': 'preprocessed',        # 시트가 이미 존재하면 덮어씀
-        'result_column_name': 'article',
-        'min_word_count': 50
+        'min_word_count': 50                        # n회 이하 나타난 단어는 아에 제외
     }
 
-    article_series = openxlsx.load_series_from_xlsx(setting['xlsx_name'],
-                                                    setting['column_name'],
-                                                    setting['sheet_name'])
+    article_series = pd.read_excel(setting['xlsx_name'], sheet_name=setting['sheet_name'])[setting['column_name']]
 
     return setting, article_series
 
@@ -61,7 +57,7 @@ def remove_stop_words_from_each_article(tokenized_article_series: pd.Series) -> 
     """ 각 열의 문서에 대해 불용어 사전 기준으로 불용어 제거
 
     Args:
-        tokenized_article_series(pd.Series): 한 줄에 토큰화된 문서 하나씩
+        tokenized_article_series(pd.Series): 각 줄은 토큰으로 구성된 리스트 예: [키워드, 키워드, 키워드 ... ]
 
     Returns:
         (pd.Series) 한 줄에 불용어 제거된 문서 하나씩
@@ -76,7 +72,7 @@ def remove_one_character_from_each_article(tokenized_article_series) -> pd.Serie
     """ 각 열의 문서에 대해 한 글자인 단어 제거
 
     Args:
-        tokenized_article_series(pd.Series): 한 줄에 토큰화된 문서 하나씩
+        tokenized_article_series(pd.Series): 각 줄은 토큰으로 구성된 리스트 예: [키워드, 키워드, 키워드 ... ]
 
     Returns:
         (pd.Series) 한 줄에 한 글자 단어가 제거된 문서 하나씩
@@ -90,8 +86,8 @@ def remove_low_count_word(tokenized_article_series, min_word_count: int = 20) ->
     """ 각 열의 문서에 대해 적게 등장한 단어 제거
 
     Args:
-        tokenized_article_series(pd.Series): 한 줄에 토큰화된 문서 하나씩
-        min_word_count: 적게 등장한 단어를 제거할 때 그 기준, 0 입력시 진행하지 않음
+        tokenized_article_series(pd.Series): 각 줄은 토큰으로 구성된 리스트 예: [키워드, 키워드, 키워드 ... ]
+        min_word_count: 적게 등장한 단어를 제거할 때 그 기준, 0 또는 음수 입력시 진행하지 않음
 
     Returns:
         (pd.Series) 한 줄에 적게 등장한 단어가 제거된 문서 하나씩
@@ -100,15 +96,16 @@ def remove_low_count_word(tokenized_article_series, min_word_count: int = 20) ->
     # TODO 데이터가 많아지면 상당히 느려짐 / 멀티프로세싱 알아보면 좋을 듯함
 
     # 최소 카운트가 0일 경우 함수 생략
-    if min_word_count == 0:
-        print('-- 적게 등장한 단어 제거의 기준이 0으로 입력되어, 제거가 진행되지 않았습니다.')
+    if min_word_count <= 0:
+        print('-- 적게 등장한 단어 제거의 기준이 0 이하로 입력되어, 제거가 진행되지 않았습니다.')
         return tokenized_article_series
 
     else:
         word_count_series = tokenized_article_series.explode().value_counts()
-        word_to_delete = set(word_count_series[word_count_series <= min_word_count].index.tolist())
+        delete_word = set(word_count_series[word_count_series <= min_word_count].index.tolist())
 
-        return pd.Series([[i for i in article if i not in word_to_delete] for article in tqdm(tokenized_article_series)])
+        return pd.Series([[i for i in article if i not in delete_word] for article in tqdm(tokenized_article_series)],
+                         name=tokenized_article_series.name)
 
 
 def preprocessing_noun(setting: dict = None, article_series: pd.Series = None):
@@ -120,7 +117,6 @@ def preprocessing_noun(setting: dict = None, article_series: pd.Series = None):
         setting: 설정값 불러오기
             setting['xlsx_name']: str = 전처리 결과를 저장할 엑셀파일, 예: 'where/filename.xlsx'
             setting['result_sheet_name']: str = 전처리 결과를 저장할 시트 이름, 예: 'proprecessed'
-            setting['result_column_name']: str = 전처리 결과를 저장할 때 머리줄에 넣을 키워드, 예: 'article'
             setting['min_word_count']: int = 적게 등장한 단어를 제거할 때 그 기준, 0 입력시 진행하지 않음
         article_series: 한 줄에 문서 하나씩
     """
@@ -134,12 +130,24 @@ def preprocessing_noun(setting: dict = None, article_series: pd.Series = None):
     tokenized_article_series = remove_stop_words_from_each_article(tokenized_article_series)
     print(f'3단계: 한글자 단어를 제거합니다.')
     tokenized_article_series = remove_one_character_from_each_article(tokenized_article_series)
-    print(f'4단계: 적게 등장한 단얼르 제거합니다.')
+    print(f'4단계: 적게 등장한 단어를 제거합니다.')
     tokenized_article_series = remove_low_count_word(tokenized_article_series, setting['min_word_count'])
+    # 0      [키워드, 키워드, 키워드 ...
+    # 1      [키워드, 키워드, 키워드 ...
+    # 2      [키워드, 키워드, 키워드 ...
+    # ...
+    # Name: article, Length: 000, dtype: object
 
     # save result
     with pd.ExcelWriter(setting['xlsx_name'], mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-        tokenized_article_series.to_excel(writer, sheet_name=setting['result_sheet_name'])
+        # 리스트를 쉼표 기준으로 분해한 다음 저장
+        data_to_save = tokenized_article_series.map(lambda word: ','.join(word))
+        data_to_save.to_excel(writer, sheet_name=setting['result_sheet_name'])
+        # 	article
+        # 0	키워드,키워드,키워드,키워드 ...
+        # 1	키워드,키워드,키워드,키워드 ...
+        # 2	키워드,키워드,키워드,키워드 ...
+        # 3	키워드,키워드,키워드,키워드 ...
 
 
 def main():
