@@ -3,11 +3,11 @@
 /input
 /result
 /test
+/test2
 /custom_okt/my_nouns.txt
 /custom_okt/my_typos.txt
 /custom_okt/open-korean-text*
 /stopwords/stopwordlist.txt
-/util/key.csv
 
 my_scratch.py
 memo.md
