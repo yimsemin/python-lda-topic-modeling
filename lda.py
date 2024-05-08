@@ -1,10 +1,4 @@
 """ 전처리된 텍스트에 대한 LDA 모델링을 실시하고 시각화함
-
-1. 말뭉치(corpus)와 딕셔너리(dictionary)의 생성, 저장
-2. 지정된 토픽 갯수의 LDA 모델의 생성
-3. 생성된 LDA 모델의 시각화
-4. 생성된 LDA 모델의 각 토픽별 대표 문서 뽑아내기
-
 """
 import warnings
 warnings.filterwarnings('ignore', category=FutureWarning)       # pandas의 future warning 가리기 위함
@@ -31,7 +25,7 @@ def _setting():
         'result_model_dir': 'test/model/',
 
         # model setting
-        # 토픽의 갯수가 정한 뒤, 토픽을 고정시키고 여러 모델을 만들어 봄
+        # 토픽의 갯수가 정해졌다면, 토픽 갯수를 고정시키고 여러 모델을 만들어 봄
         'num_topics': 10,
         'task_repeat': 5,          # random_state를 1씩 증가시키면서 모델을 반복해서 생성함
 

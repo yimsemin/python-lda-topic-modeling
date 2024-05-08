@@ -1,8 +1,4 @@
 """ 최적의 토픽 갯수 k를 찾기 위해 LDA 모델들의 혼란도(perplexity)와 응집도(coherence)를 조사함
-
-1. 전처리된 문서들 + 토픽 갯수 범위를 지정
-2. 각 토픽 갯수별 lda modeling을 수행 한 뒤, 이 모델의 혼란도와 응집도를 pd.DataFrame으로 저장함
-3. 해당 데이터를 그래프로 시각화해서 png로 저장함
 """
 import pandas as pd
 import matplotlib.pyplot as plt

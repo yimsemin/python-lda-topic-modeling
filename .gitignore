@@ -8,10 +8,8 @@
 /custom_okt/my_typos.txt
 /custom_okt/open-korean-text*
 /stopwords/stopwordlist.txt
-/util/key.csv
 
 my_scratch.py
 memo.md
 test_*.py
 task_*.py
-relevant.py

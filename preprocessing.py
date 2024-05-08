@@ -1,11 +1,4 @@
 """ 각 행에 1개의 문서가 기록된 엑셀파일에서 각 행(문서)을 전처리 -> 새로운 시트에 전처리 결과를 저장
-
-1단계 OKT 기반 명사화
-2단계 불용어 제거 (자체 사전 적용 가능 -> custom_okt 참고)
-3단계 1글자 단어 제거
-4단계 적게 등장한 단어 제거
-
-TODO : '적게 n개 이하의 문서에서 등장한 단어 제거' 추가 / 전처리 단계에서 제거할지 혹은 corpus 구성한 다음 지울지 판단 필요
 """
 import pandas as pd
 from tqdm import tqdm
@@ -13,8 +6,6 @@ from tqdm import tqdm
 from konlpy.tag import Okt
 
 import util.recorder as recorder
-# from custom_okt.okt_add_custom_dict import check_if_custom_okt     #TODO : okt 불러올 때 안내문구 제시 용
-import stopwords.stopwordlist as stopwordlist
 
 
 def _setting():
@@ -52,7 +43,6 @@ def extract_noun_from_each_article(article_series: pd.Series) -> pd.Series:
     """
     tqdm.pandas()
     okt = Okt()
-    # check_if_custom_okt()     #TODO : okt 불러올 때 안내문구 제시
 
     return article_series.progress_map(lambda x: okt.nouns(x))
 
@@ -60,16 +50,38 @@ def extract_noun_from_each_article(article_series: pd.Series) -> pd.Series:
 def remove_stop_words_from_each_article(tokenized_article_series: pd.Series,
                                         stopwordlist_location: str = 'stopwords/stopwordlist.txt') -> pd.Series:
     """ 각 열의 문서에 대해 불용어 사전 기준으로 불용어 제거
+    불용어 사전은 1줄에 1단어씩 작성, #이 포함된 단어는 주석으로 처리함
 
     Args:
         tokenized_article_series(pd.Series): 각 줄은 토큰으로 구성된 리스트 예: [키워드, 키워드, 키워드 ... ]
-        stopwordlist_location(str): 불용어사전(txt) 위치
+        stopwordlist_location(str): 불용어 사전(txt) 위치
 
     Returns:
         (pd.Series) 한 줄에 불용어 제거된 문서 하나씩
     """
     tqdm.pandas()
-    stop_words_set = stopwordlist.get_stop_words(stopwordlist_location)      # 불용어 사전 불러오기
+
+    # 불용어 사전 불러오기
+    try:
+        with open(stopwordlist_location, 'r') as f:
+            print('-- 저장된 불용어 사전을 불러옵니다.')
+            txt_lines = f.read().splitlines()
+
+        comments = [line for line in txt_lines if '#' in line]
+        if not comments:
+            print('---- 주석 없음')
+        else:
+            [print('---- '+str(i)) for i in comments]       # 불용어 사전의 코멘트 출력
+
+        stop_word_list = [line for line in txt_lines if '#' not in line]
+
+    except FileNotFoundError:
+        print('-- 기본 불용어 사전을 사용합니다.')
+        stop_word_list = ['\n', '을', '를', '은', '가', '는', '이', '도', '수', '며', '고']      # 기본 불용어
+
+    print('-- 불용어 사전 예시 : '+', '.join(stop_word_list[0:4])+' ...')
+
+    stop_words_set = set(stop_word_list)
 
     return tokenized_article_series.progress_map(lambda x: [word for word in x if word not in stop_words_set])
 
@@ -107,11 +119,15 @@ def remove_low_count_word(tokenized_article_series, min_word_count: int = 50) ->
 
     else:
         word_count_series = tokenized_article_series.explode().value_counts()
-        print('-- 다음의 단어들을 제거합니다. (단어 / 등장 횟수) :')
-        print(word_count_series[word_count_series <= min_word_count])
-        # TODO 제거한 적게 등장한 단어 리스트를 어딘가에 저장하기
+        deleted_word_count_series = word_count_series[word_count_series <= min_word_count]
 
-        delete_word = set(word_count_series[word_count_series <= min_word_count].index.tolist())
+        print('-- 다음의 단어들을 제거합니다. (단어 / 등장 횟수) :')
+        print(deleted_word_count_series)
+        # 지운 단어를 별도로 저장하고 싶을 때 활용
+        # deleted_word_count_series.to_csv('save_result_to_str', mode='w', encoding='utf-8',
+        #                                  header=['deleted word', 'count'])
+
+        delete_word = set(deleted_word_count_series.index.tolist())
 
         return pd.Series([[i for i in article if i not in delete_word] for article in tqdm(tokenized_article_series)],
                          name=tokenized_article_series.name)
@@ -130,7 +146,6 @@ def preprocessing_noun(setting: dict = None, article_series: pd.Series = None):
         setting, article_series = _setting()
 
     # preprocess - Noun
-    # TODO 모든 단어가 삭제되었을 때 비어버린 문서 처리
     print('1단계: 명사를 추출합니다.')
     tokenized_article_series = extract_noun_from_each_article(article_series)
     print('2단계: 불용어를 제거합니다.')
@@ -145,6 +160,9 @@ def preprocessing_noun(setting: dict = None, article_series: pd.Series = None):
     # 2      [키워드, 키워드, 키워드 ...
     # ...
     # Name: article, Length: 000, dtype: object
+
+    # TODO 모든 단어가 삭제되었을 때 비어버린 문서 처리
+    # TODO: 'n개 이하의 문서에서만 등장한 단어 제거' 추가
 
     # save result
     with pd.ExcelWriter(setting['xlsx_name'], mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:

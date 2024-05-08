@@ -39,7 +39,7 @@ def _setting():
 
 
 def count_frequency(tokenized_article_series: pd.Series, min_word_count: int = 50) -> pd.Series:
-    """ 단어 및 빈도수를 내림차순으로 반환
+    """ 단어(토큰)와 빈도수를 내림차순으로 반환
 
     Args:
         tokenized_article_series(pd.Series): 각 줄은 토큰으로 구성된 리스트 예: [키워드, 키워드, 키워드 ... ]

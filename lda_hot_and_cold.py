@@ -1,8 +1,4 @@
 """ 시간과 토픽분포도의 회귀분석을 통해 토픽의 논의 추세를 파악함
-
-x: 각 문서별 토픽 분포도(문서별 각 토픽일 확률 = theta / 문서의 theta 값의 합은 1)
-y: 시간
-y = ax + b 의 회귀분석을 실시함
 """
 import pandas as pd
 import patsy
@@ -145,30 +141,37 @@ def get_linear_regression_results(reg_model) -> pd.DataFrame:
                                })
 
     # 상수(Intercept) 제외 후 결과 출력
+    #       F_value  F_p_value  r_squared  ...   p_value  conf_lower  conf_higher
+    # time   1.7177   0.191071   0.006141  ...  0.191071   -0.035879     0.007199
+    # 위 index의 time은 독립변수 x를 의미함
     return reg_result.drop(['Intercept'])
 
 
-def compute_each_topic_linear_regression(time_and_theta_df: pd.DataFrame, column_name_seq: str = 'time'):
+def check_hot_and_cold(time_and_theta_csv: str, column_name_seq: str = 'time'):
     # 토픽별 회귀분석
+    df = pd.read_csv(time_and_theta_csv)
     reg_results = pd.DataFrame()
     topic = 0
     while True:
         try:
-            reg_model = sm.OLS.from_formula(f'{column_name_seq} ~ topic{topic}', time_and_theta_df).fit()
+            reg_model = sm.OLS.from_formula(f'topic{topic} ~ {column_name_seq}', df).fit()
             reg_result = get_linear_regression_results(reg_model)
-            reg_results = pd.concat([reg_results, reg_result], axis=0)
 
             topic += 1
+
+            # 표가 보기 좋도록 토픽명 추가
+            reg_result.insert(0, 'y', [f'topic{topic}'])
+            reg_results = pd.concat([reg_results, reg_result], axis=0)
+
         # topic'n'이 존재하지 않는 경우
         except patsy.PatsyError:
             break
 
+    # Hot/Cold 표기
+    reg_results['Hot.Cold'] = reg_results['co_eff'].apply(lambda x: 'Hot' if x > 0 else 'Cold')
+    reg_results.loc[reg_results['p_value'] > 0.05, 'Hot.Cold'] = '-'                                # p 값 설정
+
     return reg_results
-
-
-def check_hot_and_cold():
-    # TODO
-    pass
 
 
 def lda_hot_and_cold(setting: dict = None,
@@ -193,13 +196,10 @@ def lda_hot_and_cold(setting: dict = None,
     time_and_theta_df.to_csv(setting['result_dir'] + 'time_and_theta.csv', index=True, index_label='id', mode='w')
 
     # 선형 회귀분석
-    # TODO 완전하지 않음 / time_and_theta.csv 을 별도로 spss 또는 jamovi로 회귀분석 하는 것을 추천함
-    reg_results = compute_each_topic_linear_regression(time_and_theta_df, setting['column_name_seq'])
-    reg_results.to_csv(setting['result_dir'] + 'hot_and_cold.csv', index=True, index_label='id', mode='w')
-    # TODO Hot Cold 까지 적은 다음에 csv로 저장하기
+    regression_results = check_hot_and_cold(setting['result_dir'] + 'time_and_theta.csv', setting['column_name_seq'])
+    regression_results.to_csv(setting['result_dir'] + 'hot_and_cold.csv', index=True, index_label='id', mode='w')
 
-    # Time별 각 토픽 비중 확인하기
-    # TODO 우선은 구글스프레드시트로 그래프 그렸는데 파이썬으로 가능한지 찾아보기
+    # TODO Hot, Cold 나눠서 추세를 그래프로 시각화하기
 
 
 def main():

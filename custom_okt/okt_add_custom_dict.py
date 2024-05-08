@@ -1,3 +1,17 @@
+""" 별도로 정의한 커스텀 명사/타이포 사전을 konlpy의 okt jar 파일에 추가. 기존 파일은 백업
+
+커스텀 명사 사전
+- 해당 단어를 '명사'로 인식하게 함. 신조어 및 축약어가 기존 okt에 없는 경우가 많음
+- my_nouns.txt 파일로 저장
+
+커스텀 타이포 사전
+- 철자가 틀린 단어를 특정 단어로 변환함
+- my_typos.txt 파일로 저장
+
+이 함수는 knolpy 패키지 내부의 파일을 직접 바꿈 (기존 파일 백업은 함)
+사용자 환경에 따라서 konlpy 패키지의 설치 위치가 다르니 직접 찾아야 함
+
+"""
 import os
 import shutil
 import zipfile
@@ -97,10 +111,6 @@ def add_custom_dict_to_okt(latest_okt_dir: str, custom_noun_txt: str, custom_typ
         print('-- custom noun 사전을 업데이트 함')
         myzip.write(custom_typos_txt, arcname=custom_typos_txt_destination)
         print('-- custom typos 사전을 업데이트 함')
-
-
-def check_if_custom_okt():  # todo
-    pass
 
 
 def main():
