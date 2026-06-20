@@ -1,16 +1,12 @@
 # python-lda-topic-modeling
 
-한국어 토픽모델링(Topic Modeling)을 위한 python 코드입니다. 모델링을 위해 [Gensim](https://github.com/RaRe-Technologies/gensim) 을, 한국어 텍스트 처리를 위해 [knolpy](https://github.com/konlpy/konlpy) 를 사용합니다.
-
-
-
-
+한국어 토픽모델링(Topic Modeling)을 위한 python 코드입니다. 모델링을 위해 [Gensim](https://github.com/RaRe-Technologies/gensim) 을, 한국어 텍스트 처리를 위해 [kiwipiepy](https://github.com/bab2min/kiwipiepy)를 사용합니다.
 
 ## 1. 주요기능
 
 1. 텍스트 전처리 `preprocessing.py`
 
-   - knolpy의 Okt(Open-Korean-text) 기반 명사화 (커스텀 사전 추가 가능)
+   - `kiwipiepy` 기반 명사화 (커스텀 사전 추가 (예정))
    - 사전 기반 불용어 제거 (불용어 사전은 `stopwords/stopwordlist.txt`에 1줄에 1단어씩 작성)
    - 1글자 단어 제거
    - 적게 등장한 단어 제거
@@ -39,40 +35,20 @@
    - y(θ) = ax(time) + b 의 선형 회귀분석
    - Hot & Cold 토픽 제시
 
-6. 기타 기능들...
-   - okt 사전에 커스텀 사전(명사, 오탈자) 추가 `custom_okt/okt_add_custom_dict.py`
-
-
-
-
-
 ## 2. 실행환경
+
+### venv 설정
+
+```bash
+python3.13 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
 
 ### 주요 패키지 버전
 
-- 코드를 테스트했던 버전임
-- `python == 3.10.9`
-- `gensim == 4.3.0`
-- `knolpy == 0.6.0`
-- `pandas == 1.5.2`
-- `pyldavis == 3.3.1`
-- `statsmodels == 0.13.5`
-- `wordcloud == 1.9.3`
-
-
-
-### Java
-
-- knolpy 사용을 위해서는 java가 필요하나, 최신 버전의 java에서 작동이 안되는 경우가 있습니다.
-- 맥의 경우 : zulu JDK 17
-  - https://www.azul.com/downloads/?version=java-17-lts&os=macos&architecture=arm-64-bit&package=jdk
-  - M1 pro에서 동작 확인함
-- 윈도우의 경우 : JDK 17 - java version "17.0.4.1" 2022-08-18 LTS
-  - https://www.oracle.com/java/technologies/downloads/#java17
-  - Win 10에서 동작 확인함
-
-
-
+주요 패키지 버전은 [requirements.txt](requirements.txt)를 참조합니다.
 
 
 ## 3. 사용방법

@@ -87,7 +87,7 @@ def save_topics_csv(lda_model, num_topics, save_result_to: str = 'test/lda_topic
 def get_topic_distribution_for_each_doc(lda_model, corpus):
     # 각 문서에 대한 토픽 분포를 출력하는 코드(즉, 특정 문서에 대한 모델의 토픽 예측 코드)
     # https://dianakang.tistory.com/50
-    topic_table = pd.DataFrame()
+    topic_table_rows = []
 
     # 몇 번째 문서인지를 의미하는 문서 번호와 해당 문서의 토픽 비중을 한 줄씩 꺼내온다.
     for i, topic_list in enumerate(lda_model[corpus]):
@@ -101,14 +101,15 @@ def get_topic_distribution_for_each_doc(lda_model, corpus):
         # 모든 문서에 대해서 각각 아래를 수행
         for j, (topic_num, prop_topic) in enumerate(doc):  # 몇 번 토픽인지와 비중을 나눠서 저장한다.
             if j == 0:  # 정렬을 한 상태이므로 가장 앞에 있는 것이 가장 비중이 높은 토픽
-                topic_table = topic_table.append(pd.Series([int(topic_num), round(prop_topic, 4), topic_list]),
-                                                 ignore_index=True)
+                topic_table_rows.append([int(topic_num), round(prop_topic, 4), topic_list])
                 # 가장 비중이 높은 토픽과, 가장 비중이 높은 토픽의 비중과, 전체 토픽의 비중을 저장한다.
             else:
                 break
 
-    topic_table.columns = ['dominant topic number', 'dominant topic weight', 'topic number and weight']
-    return topic_table
+    return pd.DataFrame(
+        topic_table_rows,
+        columns=['dominant topic number', 'dominant topic weight', 'topic number and weight']
+    )
 
 
 def save_lda_html(lda_model, corpus, dictionary, save_result_to: str = 'test/lda_output.html'):

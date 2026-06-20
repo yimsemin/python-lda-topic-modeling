@@ -3,7 +3,7 @@
 import pandas as pd
 from tqdm import tqdm
 
-from konlpy.tag import Okt
+from kiwipiepy import Kiwi
 
 import util.recorder as recorder
 
@@ -33,7 +33,7 @@ def _setting():
 
 
 def extract_noun_from_each_article(article_series: pd.Series) -> pd.Series:
-    """ 각 열의 문서에 대해 okt(Open Korean Text) 기반으로 명사만 추출
+    """ 각 열의 문서에 대해 kiwipiepy 기반으로 명사만 추출
 
     Args:
         article_series(pd.Series): 한 줄에 문서 하나씩
@@ -42,9 +42,11 @@ def extract_noun_from_each_article(article_series: pd.Series) -> pd.Series:
         (pd.Series) 한 줄에 명사만 추출된(토큰화된) 문서 하나씩
     """
     tqdm.pandas()
-    okt = Okt()
+    kiwi = Kiwi()
 
-    return article_series.progress_map(lambda x: okt.nouns(x))
+    return article_series.progress_map(
+        lambda x: [token.form for token in kiwi.tokenize(x) if token.tag.startswith('N')]
+    )
 
 
 def remove_stop_words_from_each_article(tokenized_article_series: pd.Series,

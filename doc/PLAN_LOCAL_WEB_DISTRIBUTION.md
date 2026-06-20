@@ -1,6 +1,6 @@
 # Local Web Distribution
 
-이 문서는 아직 구현하지 않은 향후 배포 계획이다. 현재 사용법은 `README.md`에 두고, 이 계획은 기존 CLI 파이프라인과 `kiwipiepy` 전환이 안정화된 뒤 별도 작업으로 진행한다.
+이 문서는 아직 구현하지 않은 향후 배포 계획이다.
 
 ## 결정
 
@@ -70,7 +70,7 @@ project-root/
 
 - `uv`로 Python과 패키지 설치를 자동화한다.
 - `uv` 자체도 전역 설치하지 말고 `.runtime/uv`에 둔다.
-- 다음 저장 위치를 프로젝트 내부로 고정한다: `UV_CACHE_DIR`, `UV_PYTHON_INSTALL_DIR`, `UV_PROJECT_ENVIRONMENT`, `UV_TOOL_DIR`, `UV_TOOL_BIN_DIR`, `MPLCONFIGDIR`.
+- 다음 저장 위치를 프로젝트 내부로 고정한다: `UV_CACHE_DIR`, `UV_PYTHON_INSTALL_DIR`, `UV_PROJECT_ENVIRONMENT`, `UV_TOOL_DIR`, `UV_TOOL_BIN_DIR`.
 - `start`는 가능하면 `uv run`이 아니라 `.venv`의 Python을 직접 실행한다.
 - 로컬 서버는 `127.0.0.1`에만 바인딩한다.
 - 웹 UI의 CSS, JavaScript, 이미지, 폰트는 외부 CDN이 아니라 저장소 내부 자산을 사용한다.
@@ -87,12 +87,7 @@ project-root/
 ## 구현 전 확인
 
 - 현재 CLI 파이프라인이 Windows와 macOS에서 정상 동작하는지 확인한다.
-- KoNLPy/Okt 의존성을 `kiwipiepy`로 바꾸는 작업을 먼저 안정화한다.
 - 기존 공개 진입점, 파일명, 저장 위치, CSV 컬럼명은 가능한 한 유지한다.
 - 로컬 웹 UI는 기존 스크립트 위에 얇게 얹고, 기존 CLI 사용 방식은 깨지 않게 한다.
 - 설치와 실행 후 프로젝트 폴더 밖에 생성되는 파일이 없는지 확인한다.
 - 업데이트/삭제 안내에서는 `workspace` 백업 필요성을 명확히 한다.
-
-## 문서 원칙
-
-이 계획은 이 파일 하나에만 유지한다. 구현 전에는 `README.md`에 현재 사용법처럼 적지 않고, `AGENTS.md`에도 반복하지 않는다.
