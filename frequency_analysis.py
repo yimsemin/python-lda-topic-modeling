@@ -17,7 +17,7 @@ def _split_tokenized_article(line):
     if line is None or pd.isna(line):
         return []
 
-    return [word for word in str(line).split(',') if word]
+    return [word.strip() for word in str(line).split(',') if word.strip()]
 
 
 def _get_available_word_cloud_font(my_font: str = 'font/NanumGothic.ttf'):
@@ -101,7 +101,7 @@ def word_cloud_analysis(csv_location: str, save_graph_to: str = None, my_font: s
         print('-- 빈도분석 결과가 비어 있어 워드클라우드를 생성하지 않습니다.')
         return
 
-    my_dict = dict(zip(df.index, [x for y in df.to_numpy().tolist() for x in y]))
+    my_dict = dict(zip(df.index, df.iloc[:, 0]))
     my_dict = {word: count for word, count in my_dict.items() if pd.notna(word) and pd.notna(count) and count > 0}
     if not my_dict:
         print('-- 워드클라우드에 사용할 단어가 없어 생성하지 않습니다.')
