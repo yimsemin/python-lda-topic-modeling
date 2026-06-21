@@ -13,13 +13,13 @@ import util.recorder as recorder
 def _setting():
     setting = {
         # input
-        'xlsx_name': 'input/data.xlsx',
+        'xlsx_name': 'test/input/data.xlsx',
         'sheet_name': 'preprocessed',
         'column_name': 'article',
 
         # output
-        'result_dir': 'output/',
-        'result_model_dir': 'output/model/',
+        'result_dir': 'test/output/',
+        'result_model_dir': 'test/output/model/',
 
         # 조사할 토픽 갯수 범위
         'topic_number_start': 2,
@@ -108,8 +108,8 @@ def get_perplexity_and_coherence_value_list(tokenized_article_series, corpus, di
                                             topic_number_list,
                                             iterations: int = 100,
                                             random_state: int = 4190,
-                                            result_dir: str = 'output/',
-                                            model_dir: str = 'output/model/') -> pd.DataFrame:
+                                            result_dir: str = 'test/output/',
+                                            model_dir: str = 'test/output/model/') -> pd.DataFrame:
     """
 
     Args:

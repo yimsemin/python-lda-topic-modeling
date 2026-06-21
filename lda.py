@@ -16,13 +16,13 @@ import util.recorder as recorder
 def _setting():
     # input
     setting = {
-        'xlsx_name': 'input/data.xlsx',
+        'xlsx_name': 'test/input/data.xlsx',
         'sheet_name': 'preprocessed',
         'column_name': 'article',
 
         # output
-        'result_dir': 'output/',
-        'result_model_dir': 'output/model/',
+        'result_dir': 'test/output/',
+        'result_model_dir': 'test/output/model/',
 
         # model setting
         # 토픽의 갯수가 정해졌다면, 토픽 갯수를 고정시키고 여러 모델을 만들어 봄
@@ -45,7 +45,7 @@ def _setting():
     return setting, tokenized_article_series
 
 
-def get_corpus_and_dictionary(tokenized_article_series, save_path: str = 'output/'):
+def get_corpus_and_dictionary(tokenized_article_series, save_path: str = 'test/output/'):
     if save_path is not None:
         recorder.ensure_dir(save_path)
         try:
@@ -104,7 +104,7 @@ def load_lda_model(model_dir, num_topics, random_state):
     raise FileNotFoundError(model_dir + get_lda_model_name(num_topics, random_state))
 
 
-def save_topics_csv(lda_model, num_topics, save_result_to: str = 'output/lda_topics.csv'):
+def save_topics_csv(lda_model, num_topics, save_result_to: str = 'test/output/lda_topics.csv'):
     # LDA 모델의 토픽 리스트를 csv파일로 저장
 
     topics = pd.Series(lda_model.print_topics(num_topics=num_topics, num_words=10))
@@ -144,7 +144,7 @@ def get_topic_distribution_for_each_doc(lda_model, corpus):
     )
 
 
-def save_lda_html(lda_model, corpus, dictionary, save_result_to: str = 'output/lda_output.html'):
+def save_lda_html(lda_model, corpus, dictionary, save_result_to: str = 'test/output/lda_output.html'):
     # "LDA 시각화 결과를 html파일로 저장
 
     recorder.ensure_parent_dir(save_result_to)

@@ -12,7 +12,7 @@ import util.recorder as recorder
 def _setting():
     setting = {
         # input - 전처리를 수행할 엑셀파일
-        'xlsx_name': 'input/data.xlsx',
+        'xlsx_name': 'test/input/data.xlsx',
         'sheet_name': 0,                                # 시트 이름 str 입력 / 0 입력 -> 가장 왼쪽에 있는 시트를 선택
         'column_name': 'article',                       # 전처리 대상 문서가 있는 열의 첫번째 행 이름 str 입력
         # 1번째 행     article (제목 줄)
@@ -21,7 +21,7 @@ def _setting():
         # 4번째 행     1줄에 1개의 문서 ...
         # ...
 
-        'stopwordlist_location': 'input/stopwordlist.txt',       # 불용어 사전 위치
+        'stopwordlist_location': 'test/input/stopwordlist.txt',  # 불용어 사전 위치
 
         # output - 전처리 결과에 대한 설정
         'result_sheet_name': 'preprocessed',            # 결과를 저장할 시트 이름 / 시트가 이미 존재하면 덮어씀
@@ -33,7 +33,7 @@ def _setting():
     return setting, article_series
 
 
-def load_stopwords(stopwordlist_location: str = 'input/stopwordlist.txt') -> Stopwords:
+def load_stopwords(stopwordlist_location: str = 'test/input/stopwordlist.txt') -> Stopwords:
     """ kiwipiepy 기본 불용어에 사용자 정의 불용어를 추가 """
     stopwords = Stopwords()
 
@@ -99,7 +99,7 @@ def extract_noun_from_each_article(article_series: pd.Series, stopwords: Stopwor
 
 
 def remove_stop_words_from_each_article(tokenized_article_series: pd.Series,
-                                        stopwordlist_location: str = 'input/stopwordlist.txt') -> pd.Series:
+                                        stopwordlist_location: str = 'test/input/stopwordlist.txt') -> pd.Series:
     """ 각 열의 문서에 대해 불용어 사전 기준으로 불용어 제거
     불용어 사전은 1줄에 1개씩 작성, 단어/품사 형식을 권장, #이 포함된 줄은 주석으로 처리함
 

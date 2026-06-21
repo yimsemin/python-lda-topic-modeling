@@ -49,7 +49,7 @@ def _get_available_word_cloud_font(my_font: str = 'font/NanumGothic.ttf'):
 def _setting():
     setting = {
         # input
-        'xlsx_name': 'input/data.xlsx',
+        'xlsx_name': 'test/input/data.xlsx',
         'sheet_name': 'preprocessed',                                   # 시트 이름 str 입력
         'column_name': 'article',                                       # 전처리를 한 문서가 있는 열의 첫번째 행 이름 str 입력
         # 1번째 행      article (제목 줄)
@@ -59,8 +59,8 @@ def _setting():
         # ...
 
         # output
-        'result_csv_name': 'output/frequency_analysis.csv',             # 파일이 이미 존재하면 덮어씀
-        'result_word_cloud_name': 'output/word_cloud.png',              # 파일이 이미 존재하면 덮어씀
+        'result_csv_name': 'test/output/frequency_analysis.csv',        # 파일이 이미 존재하면 덮어씀
+        'result_word_cloud_name': 'test/output/word_cloud.png',         # 파일이 이미 존재하면 덮어씀
         'word_cloud_font': 'font/NanumGothic.ttf',                      # 워드클라우드용 폰트
         'min_word_count': 50                                            # n회 이하 나타난 단어는 결과에서 제거
     }

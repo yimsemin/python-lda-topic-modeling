@@ -12,9 +12,9 @@ import util.recorder as recorder
 def _setting():
     setting = {
         # input
-        'lda_model': 'output/model/lda_k_10_rd_4190',       # 분석할 모델명을 기술
+        'lda_model': 'test/output/model/lda_k_10_rd_4190',  # 분석할 모델명을 기술
 
-        'xlsx_name': 'input/data.xlsx',
+        'xlsx_name': 'test/input/data.xlsx',
         'sheet_name': 'preprocessed',
         'column_name': 'article',
 
@@ -25,7 +25,7 @@ def _setting():
         # https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior
 
         # output
-        'result_dir': 'output/'
+        'result_dir': 'test/output/'
     }
 
     lda_model = LdaModel.load(setting['lda_model'])
@@ -92,8 +92,8 @@ def get_theta_for_each_article_each_topic(lda_model, corpus) -> (pd.DataFrame, p
     return theta_values_df, dominant_topics_series
 
 
-def get_example_for_each_topic(f_path='output/time_and_theta.csv',
-                               save_result_to='output/example_article.txt',
+def get_example_for_each_topic(f_path='test/output/time_and_theta.csv',
+                               save_result_to='test/output/example_article.txt',
                                topic_start_num=0, topic_last_num=20):
     # 각 토픽별 대표 문서 추출
     # Todo time이랑 theta를 한 함수에 둘 필요가 없음... 구분 필요
