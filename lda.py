@@ -16,13 +16,13 @@ import util.recorder as recorder
 def _setting():
     # input
     setting = {
-        'xlsx_name': 'test/test.xlsx',
+        'xlsx_name': 'input/data.xlsx',
         'sheet_name': 'preprocessed',
         'column_name': 'article',
 
-        # output -- 폴더는 미리 만들어둬야 함
-        'result_dir': 'test/',
-        'result_model_dir': 'test/model/',
+        # output
+        'result_dir': 'output/',
+        'result_model_dir': 'output/model/',
 
         # model setting
         # 토픽의 갯수가 정해졌다면, 토픽 갯수를 고정시키고 여러 모델을 만들어 봄
@@ -45,27 +45,36 @@ def _setting():
     return setting, tokenized_article_series
 
 
-def get_corpus_and_dictionary(tokenized_article_series, save_path: str = 'test/'):
-    try:
-        # load dictionary
-        dictionary = corpora.Dictionary.load(save_path + 'dictionary')
-        print('-- 기존 dictionary 파일을 사용합니다.')
-    except FileNotFoundError:
-        # if no saved dictionary, then get new // if save_path is set then save it
+def get_corpus_and_dictionary(tokenized_article_series, save_path: str = 'output/'):
+    if save_path is not None:
+        recorder.ensure_dir(save_path)
+        try:
+            # load dictionary
+            dictionary = corpora.Dictionary.load(save_path + 'dictionary')
+            print('-- 기존 dictionary 파일을 사용합니다.')
+        except FileNotFoundError:
+            # if no saved dictionary, then get new // if save_path is set then save it
+            dictionary = corpora.Dictionary(tokenized_article_series)
+            dictionary.save(save_path + 'dictionary')
+            print('-- 새로 dictionary 파일을 생성합니다.')
+    else:
         dictionary = corpora.Dictionary(tokenized_article_series)
-        dictionary.save(save_path + 'dictionary') if save_path is not None else None
         print('-- 새로 dictionary 파일을 생성합니다.')
 
     print('dictionary size : %d' % len(dictionary))
 
-    try:
-        # load corpus
-        corpus = corpora.MmCorpus(save_path + 'corpus')
-        print('-- 기존 corpus 파일을 사용합니다.')
-    except FileNotFoundError:
-        # if no saved corpus, then get new // if save_path is set then save it
+    if save_path is not None:
+        try:
+            # load corpus
+            corpus = corpora.MmCorpus(save_path + 'corpus')
+            print('-- 기존 corpus 파일을 사용합니다.')
+        except FileNotFoundError:
+            # if no saved corpus, then get new // if save_path is set then save it
+            corpus = [dictionary.doc2bow(text) for text in tokenized_article_series]
+            corpora.MmCorpus.serialize(save_path + 'corpus', corpus)
+            print('-- 새로 corpus 파일을 생성합니다.')
+    else:
         corpus = [dictionary.doc2bow(text) for text in tokenized_article_series]
-        corpora.MmCorpus.serialize(save_path + 'corpus', corpus) if save_path is not None else None
         print('-- 새로 corpus 파일을 생성합니다.')
 
     print('corpus size : %d' % len(corpus))
@@ -73,7 +82,29 @@ def get_corpus_and_dictionary(tokenized_article_series, save_path: str = 'test/'
     return corpus, dictionary
 
 
-def save_topics_csv(lda_model, num_topics, save_result_to: str = 'test/lda_topics.csv'):
+def get_lda_model_name(num_topics, random_state):
+    return f'lda_k_{num_topics}_rd_{random_state}'
+
+
+def get_legacy_lda_model_names(num_topics, random_state):
+    return [f'lda_k{num_topics}_rd_{random_state}',
+            f'lda_k{num_topics}_rd{random_state}']
+
+
+def load_lda_model(model_dir, num_topics, random_state):
+    model_names = [get_lda_model_name(num_topics, random_state)]
+    model_names += get_legacy_lda_model_names(num_topics, random_state)
+
+    for model_name in model_names:
+        try:
+            return LdaModel.load(model_dir + model_name), model_name
+        except FileNotFoundError:
+            pass
+
+    raise FileNotFoundError(model_dir + get_lda_model_name(num_topics, random_state))
+
+
+def save_topics_csv(lda_model, num_topics, save_result_to: str = 'output/lda_topics.csv'):
     # LDA 모델의 토픽 리스트를 csv파일로 저장
 
     topics = pd.Series(lda_model.print_topics(num_topics=num_topics, num_words=10))
@@ -81,6 +112,7 @@ def save_topics_csv(lda_model, num_topics, save_result_to: str = 'test/lda_topic
     # 0	    (0, '0.124*"키워드" + 0.084*"키워드" + 0.067*"키워드" + ... )
     # 1	    (1, '0.077*"키워드" + 0.077*"키워드" + 0.056*"키워드" + ... )
     # 2	    (2, '0.042*"키워드" + 0.037*"키워드" + 0.034*"키워드" + ... )
+    recorder.ensure_parent_dir(save_result_to)
     topics.to_csv(save_result_to, mode='w', encoding='utf-8', header=['list'], index_label='topic')
 
 
@@ -112,9 +144,10 @@ def get_topic_distribution_for_each_doc(lda_model, corpus):
     )
 
 
-def save_lda_html(lda_model, corpus, dictionary, save_result_to: str = 'test/lda_output.html'):
+def save_lda_html(lda_model, corpus, dictionary, save_result_to: str = 'output/lda_output.html'):
     # "LDA 시각화 결과를 html파일로 저장
 
+    recorder.ensure_parent_dir(save_result_to)
     output = gensim_vis.prepare(lda_model, corpus, dictionary, doc_topic_dist=None, sort_topics=False)
     # sort_topics=False의 경우 LDA 모델의 토픽 순서와 같음
     # sort_topics=True의 경우 topic portion이 높은 순으로 정렬됨
@@ -125,28 +158,35 @@ def lda_modeling(setting=None, tokenized_article_series=None):
     tqdm.pandas()
 
     # setting
-    if setting or tokenized_article_series is None:
+    if setting is None or tokenized_article_series is None:
         setting, tokenized_article_series = _setting()
 
     corpus, dictionary = get_corpus_and_dictionary(tokenized_article_series, setting['result_dir'])
     iterations, random_state = setting['iterations'], setting['random_state']
+    recorder.ensure_dir(setting['result_model_dir'])
 
     # LDA modeling + save model
     for i in tqdm([setting['num_topics'] for _ in range(setting['task_repeat'])]):
+        model_name = get_lda_model_name(i, random_state)
+        model_path = setting['result_model_dir'] + model_name
         try:
-            lda_model = LdaModel.load(setting['result_model_dir'] + f'lda_k{i}_rd_{random_state}')
+            lda_model, loaded_model_name = load_lda_model(setting['result_model_dir'], i, random_state)
             print(f'\n해당 모델({i}개 토픽, random_state: {random_state})은 기존에 생성한 것을 사용합니다.')
+            if loaded_model_name != model_name:
+                lda_model.save(model_path)
+                print(f'-- 모델 파일명을 {model_name} 형식으로 저장합니다.')
         except FileNotFoundError:
             lda_model = LdaModel(corpus=corpus, num_topics=i, id2word=dictionary,
                                  passes=20, iterations=iterations, random_state=random_state)
-            lda_model.save(setting['result_model_dir'] + f'lda_k{i}_rd_{random_state}')
+            lda_model.save(model_path)
 
-        save_topics_csv(lda_model, i, setting['result_dir'] + f'lda_k_{i}_rd_{random_state}.csv')
-        save_lda_html(lda_model, corpus, dictionary, setting['result_dir'] + f'lda_k_{i}_rd_{random_state}.html')
+        save_topics_csv(lda_model, i, setting['result_dir'] + f'{model_name}.csv')
+        save_lda_html(lda_model, corpus, dictionary, setting['result_dir'] + f'{model_name}.html')
 
-        topic_table = get_topic_distribution_for_each_doc(lda_model,corpus)
-        topic_table.to_csv(setting['result_dir'] + f'lda_k_{i}_rd_{random_state}_topic_table.csv',
-                           mode='w', encoding='utf-8')
+        topic_table = get_topic_distribution_for_each_doc(lda_model, corpus)
+        topic_table_path = setting['result_dir'] + f'{model_name}_topic_table.csv'
+        recorder.ensure_parent_dir(topic_table_path)
+        topic_table.to_csv(topic_table_path, mode='w', encoding='utf-8')
 
         # 동일한 토픽갯수를 반복하므로 random_state를 수정
         random_state += 1

@@ -7,7 +7,8 @@
 1. 텍스트 전처리 `preprocessing.py`
 
    - `kiwipiepy` 기반 명사화 (커스텀 사전 추가 (예정))
-   - 사전 기반 불용어 제거 (불용어 사전은 `stopwords/stopwordlist.txt`에 1줄에 1단어씩 작성)
+   - `kiwipiepy` 기본 불용어 + 사용자 정의 불용어 제거
+     (`input/stopwordlist.txt`에 `단어/품사` 형식으로 작성, 품사 생략 시 `NNG`로 처리)
    - 1글자 단어 제거
    - 적게 등장한 단어 제거
 
@@ -54,6 +55,9 @@ python -m pip install -r requirements.txt
 ## 3. 사용방법
 
 1. 코드를 다운로드하고, 코드를 실행시킬 수 있는 환경을 구성합니다(상단 실행환경 참조)
-2. raw 데이터의 입력 → 엑셀파일(.xlsx)
+2. raw 데이터 엑셀파일(.xlsx)을 `input/data.xlsx`에 둡니다.
 3. 상단의 `_setting()` 에서 세부 설정을 조정할 수 있음
-4. 결과물이 생성될 폴더는 미리 만들어둬야 함
+4. 사용자 정의 불용어가 필요하면 `input/stopwordlist.example.txt`를 참고해 `input/stopwordlist.txt`를 작성합니다.
+5. `preprocessing.py`는 `input/data.xlsx`에 `preprocessed` 시트를 추가합니다.
+6. 빈도분석, LDA, 시계열 분석 결과물은 `output/`에 저장됩니다. 필요한 출력 폴더는 자동으로 생성됩니다.
+7. 개발 검증용 샘플은 같은 구조로 `test/input/`에 두고, 실행 결과는 `test/output/`에 저장합니다.

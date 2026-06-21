@@ -12,20 +12,20 @@ import util.recorder as recorder
 def _setting():
     setting = {
         # input
-        'lda_model': 'test/model/lda_k10_rd_4190',          # 분석할 모델명을 기술
+        'lda_model': 'output/model/lda_k_10_rd_4190',       # 분석할 모델명을 기술
 
-        'xlsx_name': 'test/test.xlsx',
+        'xlsx_name': 'input/data.xlsx',
         'sheet_name': 'preprocessed',
         'column_name': 'article',
 
-        'sheet_name_seq': "Sheet1",                         # 시계열 정보가 담긴 시트 이름
+        'sheet_name_seq': 0,                                # 시계열 정보가 담긴 시트 이름 / 0 입력 -> 가장 왼쪽에 있는 시트를 선택
         'column_name_seq': "date",                          # 시계열 정보가 담긴 열 제목 (첫번째 행)
         'time_format': "%Y%m",
         # 엑셀에서 '날짜' 서식으로 입력했다면, 위 date 형식으로 바꿔줌 / 필요 없다면 엑셀에서 '텍스트' 서식으로 입력할 것
         # https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior
 
         # output
-        'result_dir': 'test/'
+        'result_dir': 'output/'
     }
 
     lda_model = LdaModel.load(setting['lda_model'])
@@ -40,7 +40,7 @@ def _setting():
         time_series = time_series.dt.strftime(setting['time_format'])
         print('-- time_format을 적용합니다.')
     except AttributeError:
-        print('-- datatime format이 아니므로, 입력된 값을 그대로 사용합니다.')
+        print('-- datetime format이 아니므로, 입력된 값을 그대로 사용합니다.')
 
     return setting, lda_model, corpus, time_series
 
@@ -92,8 +92,8 @@ def get_theta_for_each_article_each_topic(lda_model, corpus) -> (pd.DataFrame, p
     return theta_values_df, dominant_topics_series
 
 
-def get_example_for_each_topic(f_path='test/time_and_theta.csv',
-                               save_result_to='test/example_article.txt',
+def get_example_for_each_topic(f_path='output/time_and_theta.csv',
+                               save_result_to='output/example_article.txt',
                                topic_start_num=0, topic_last_num=20):
     # 각 토픽별 대표 문서 추출
     # Todo time이랑 theta를 한 함수에 둘 필요가 없음... 구분 필요
@@ -106,10 +106,6 @@ def get_example_for_each_topic(f_path='test/time_and_theta.csv',
             my_series = df[f'topic{i}']
             bbb = my_series.sort_values(ascending=False)
             bbb = tuple(zip(bbb, bbb.index))[0:10]
-
-            new_list = []
-            for value, number in bbb:
-                new_list.append(value, number)
 
             for value, number in bbb:
                 print(f'{number + 2}번째 기사, value = {value}')
@@ -179,7 +175,7 @@ def lda_hot_and_cold(setting: dict = None,
                      corpus=None,
                      time_series=None):
     # setting
-    if setting or lda_model or corpus or time_series is None:
+    if setting is None or lda_model is None or corpus is None or time_series is None:
         print('기본 셋팅으로 진행')
         setting, lda_model, corpus, time_series = _setting()
 
@@ -193,11 +189,15 @@ def lda_hot_and_cold(setting: dict = None,
     # ...     ...       ...       ...  ...       ...       ...             ...
 
     # 분석한 데이터 저장
-    time_and_theta_df.to_csv(setting['result_dir'] + 'time_and_theta.csv', index=True, index_label='id', mode='w')
+    time_and_theta_csv_path = setting['result_dir'] + 'time_and_theta.csv'
+    recorder.ensure_parent_dir(time_and_theta_csv_path)
+    time_and_theta_df.to_csv(time_and_theta_csv_path, index=True, index_label='id', mode='w')
 
     # 선형 회귀분석
-    regression_results = check_hot_and_cold(setting['result_dir'] + 'time_and_theta.csv', setting['column_name_seq'])
-    regression_results.to_csv(setting['result_dir'] + 'hot_and_cold.csv', index=True, index_label='id', mode='w')
+    regression_results = check_hot_and_cold(time_and_theta_csv_path, setting['column_name_seq'])
+    hot_and_cold_csv_path = setting['result_dir'] + 'hot_and_cold.csv'
+    recorder.ensure_parent_dir(hot_and_cold_csv_path)
+    regression_results.to_csv(hot_and_cold_csv_path, index=True, index_label='id', mode='w')
 
     # TODO Hot, Cold 나눠서 추세를 그래프로 시각화하기
 

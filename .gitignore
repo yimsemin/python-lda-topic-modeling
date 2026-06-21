@@ -7,10 +7,12 @@ __pycache__/
 Thumbs.db
 Desktop.ini
 
-/input
-/result
-/test*
-/stopwords/stopwordlist.txt
+/input/*
+!/input/stopwordlist.example.txt
+
+/output/
+
+/test/output/
 
 *.log
 test_*.py

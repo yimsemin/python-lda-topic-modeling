@@ -4,6 +4,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from kiwipiepy import Kiwi
+from kiwipiepy.utils import Stopwords
 
 import util.recorder as recorder
 
@@ -11,7 +12,7 @@ import util.recorder as recorder
 def _setting():
     setting = {
         # input - 전처리를 수행할 엑셀파일
-        'xlsx_name': 'test/test.xlsx',
+        'xlsx_name': 'input/data.xlsx',
         'sheet_name': 0,                                # 시트 이름 str 입력 / 0 입력 -> 가장 왼쪽에 있는 시트를 선택
         'column_name': 'article',                       # 전처리 대상 문서가 있는 열의 첫번째 행 이름 str 입력
         # 1번째 행     article (제목 줄)
@@ -20,7 +21,7 @@ def _setting():
         # 4번째 행     1줄에 1개의 문서 ...
         # ...
 
-        'stopwordlist_location': 'stopwords/stopwordlist.txt',   # 불용어 사전 위치
+        'stopwordlist_location': 'input/stopwordlist.txt',       # 불용어 사전 위치
 
         # output - 전처리 결과에 대한 설정
         'result_sheet_name': 'preprocessed',            # 결과를 저장할 시트 이름 / 시트가 이미 존재하면 덮어씀
@@ -32,7 +33,45 @@ def _setting():
     return setting, article_series
 
 
-def extract_noun_from_each_article(article_series: pd.Series) -> pd.Series:
+def load_stopwords(stopwordlist_location: str = 'input/stopwordlist.txt') -> Stopwords:
+    """ kiwipiepy 기본 불용어에 사용자 정의 불용어를 추가 """
+    stopwords = Stopwords()
+
+    try:
+        with open(stopwordlist_location, 'r', encoding='utf-8') as f:
+            print('-- 저장된 불용어 사전을 불러옵니다.')
+            txt_lines = f.read().splitlines()
+    except FileNotFoundError:
+        print('-- 사용자 정의 불용어 사전이 없어 kiwipiepy 기본 불용어만 사용합니다.')
+        return stopwords
+
+    custom_stopwords = []
+    comments = [line for line in txt_lines if '#' in line]
+    if not comments:
+        print('---- 주석 없음')
+    else:
+        for i in comments:
+            print('---- '+str(i))
+
+    for raw_line in txt_lines:
+        line = raw_line.strip()
+        if not line or '#' in line:
+            continue
+
+        if '/' in line:
+            form, tag = line.rsplit('/', 1)
+            custom_stopwords.append((form.strip(), tag.strip()))
+        else:
+            custom_stopwords.append((line, 'NNG'))
+
+    if custom_stopwords:
+        stopwords.add(custom_stopwords)
+        print('-- 사용자 정의 불용어 예시 : '+', '.join([f'{form}/{tag}' for form, tag in custom_stopwords[0:4]])+' ...')
+
+    return stopwords
+
+
+def extract_noun_from_each_article(article_series: pd.Series, stopwords: Stopwords = None) -> pd.Series:
     """ 각 열의 문서에 대해 kiwipiepy 기반으로 명사만 추출
 
     Args:
@@ -43,16 +82,26 @@ def extract_noun_from_each_article(article_series: pd.Series) -> pd.Series:
     """
     tqdm.pandas()
     kiwi = Kiwi()
+    target_tags = {'NNG', 'NNP'}
 
-    return article_series.progress_map(
-        lambda x: [token.form for token in kiwi.tokenize(x) if token.tag.startswith('N')]
-    )
+    def extract_noun(article):
+        # 빈 셀은 pandas에서 NaN으로 읽히므로 빈 문서로 처리한다.
+        if article is None or pd.isna(article):
+            return []
+
+        tokens = kiwi.tokenize(str(article))
+        if stopwords is not None:
+            tokens = stopwords.filter(tokens)
+
+        return [token.form for token in tokens if token.tag in target_tags]
+
+    return article_series.progress_map(extract_noun)
 
 
 def remove_stop_words_from_each_article(tokenized_article_series: pd.Series,
-                                        stopwordlist_location: str = 'stopwords/stopwordlist.txt') -> pd.Series:
+                                        stopwordlist_location: str = 'input/stopwordlist.txt') -> pd.Series:
     """ 각 열의 문서에 대해 불용어 사전 기준으로 불용어 제거
-    불용어 사전은 1줄에 1단어씩 작성, #이 포함된 단어는 주석으로 처리함
+    불용어 사전은 1줄에 1개씩 작성, 단어/품사 형식을 권장, #이 포함된 줄은 주석으로 처리함
 
     Args:
         tokenized_article_series(pd.Series): 각 줄은 토큰으로 구성된 리스트 예: [키워드, 키워드, 키워드 ... ]
@@ -65,7 +114,7 @@ def remove_stop_words_from_each_article(tokenized_article_series: pd.Series,
 
     # 불용어 사전 불러오기
     try:
-        with open(stopwordlist_location, 'r') as f:
+        with open(stopwordlist_location, 'r', encoding='utf-8') as f:
             print('-- 저장된 불용어 사전을 불러옵니다.')
             txt_lines = f.read().splitlines()
 
@@ -73,9 +122,19 @@ def remove_stop_words_from_each_article(tokenized_article_series: pd.Series,
         if not comments:
             print('---- 주석 없음')
         else:
-            [print('---- '+str(i)) for i in comments]       # 불용어 사전의 코멘트 출력
+            for i in comments:
+                print('---- '+str(i))       # 불용어 사전의 코멘트 출력
 
-        stop_word_list = [line for line in txt_lines if '#' not in line]
+        stop_word_list = []
+        for raw_line in txt_lines:
+            line = raw_line.strip()
+            if not line or '#' in line:
+                continue
+
+            if '/' in line:
+                stop_word_list.append(line.rsplit('/', 1)[0].strip())
+            else:
+                stop_word_list.append(line)
 
     except FileNotFoundError:
         print('-- 기본 불용어 사전을 사용합니다.')
@@ -132,6 +191,7 @@ def remove_low_count_word(tokenized_article_series, min_word_count: int = 50) ->
         delete_word = set(deleted_word_count_series.index.tolist())
 
         return pd.Series([[i for i in article if i not in delete_word] for article in tqdm(tokenized_article_series)],
+                         index=tokenized_article_series.index,
                          name=tokenized_article_series.name)
 
 
@@ -144,18 +204,22 @@ def preprocessing_noun(setting: dict = None, article_series: pd.Series = None):
         setting: 설정값 불러오기
         article_series: 한 줄에 문서 하나씩
     """
-    if setting or article_series is None:
-        setting, article_series = _setting()
+    if setting is None:
+        setting, default_article_series = _setting()
+        if article_series is None:
+            article_series = default_article_series
+    elif article_series is None:
+        article_series = pd.read_excel(setting['xlsx_name'],
+                                       sheet_name=setting['sheet_name'])[setting['column_name']]
+
+    stopwords = load_stopwords(setting['stopwordlist_location'])
 
     # preprocess - Noun
-    print('1단계: 명사를 추출합니다.')
-    tokenized_article_series = extract_noun_from_each_article(article_series)
-    print('2단계: 불용어를 제거합니다.')
-    tokenized_article_series = remove_stop_words_from_each_article(tokenized_article_series,
-                                                                   setting['stopwordlist_location'])
-    print('3단계: 한글자 단어를 제거합니다.')
+    print('1단계: 명사를 추출하고 불용어를 제거합니다.')
+    tokenized_article_series = extract_noun_from_each_article(article_series, stopwords)
+    print('2단계: 한글자 단어를 제거합니다.')
     tokenized_article_series = remove_one_character_from_each_article(tokenized_article_series)
-    print('4단계: 적게 등장한 단어를 제거합니다.')
+    print('3단계: 적게 등장한 단어를 제거합니다.')
     tokenized_article_series = remove_low_count_word(tokenized_article_series, setting['min_word_count'])
     # 0      [키워드, 키워드, 키워드 ...
     # 1      [키워드, 키워드, 키워드 ...
