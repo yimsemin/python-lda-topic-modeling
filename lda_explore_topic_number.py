@@ -1,5 +1,6 @@
 """ 최적의 토픽 갯수 k를 찾기 위해 LDA 모델들의 혼란도(perplexity)와 응집도(coherence)를 조사함
 """
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
 from gensim.models import CoherenceModel
@@ -8,6 +9,7 @@ from tqdm import tqdm
 
 import lda
 import util.recorder as recorder
+import util.token_parser as token_parser
 
 
 def _setting():
@@ -32,7 +34,7 @@ def _setting():
     }
 
     excel_data = pd.read_excel(setting['xlsx_name'], sheet_name=setting['sheet_name'])[setting['column_name']]
-    tokenized_article_series = excel_data.map(lambda line: line.split(','), na_action='ignore')
+    tokenized_article_series = excel_data.map(token_parser.parse_tokenized_article)
     # 0      [키워드, 키워드, 키워드 ...
     # 1      [키워드, 키워드, 키워드 ...
     # 2      [키워드, 키워드, 키워드 ...
@@ -126,12 +128,13 @@ def get_perplexity_and_coherence_value_list(tokenized_article_series, corpus, di
         (pd.DataFrame) 토픽 갯수 별 perplexity 및 coherence 값
     """
     values_dict = {}
+    tokenized_article_series = pd.Series(tokenized_article_series).map(token_parser.parse_tokenized_article)
     recorder.ensure_dir(result_dir)
     recorder.ensure_dir(model_dir)
 
     for i in tqdm(topic_number_list):
         model_name = lda.get_lda_model_name(i, random_state)
-        model_path = model_dir + model_name
+        model_path = os.path.join(model_dir, model_name)
         try:
             lda_model, loaded_model_name = lda.load_lda_model(model_dir, i, random_state)
             if loaded_model_name != model_name:
@@ -142,7 +145,7 @@ def get_perplexity_and_coherence_value_list(tokenized_article_series, corpus, di
             lda_model = LdaModel(corpus=corpus, num_topics=i, id2word=dictionary,
                                  passes=20, iterations=iterations, random_state=random_state)
             lda_model.save(model_path)
-            lda.save_lda_html(lda_model, corpus, dictionary, result_dir + f'{model_name}.html')
+            lda.save_lda_html(lda_model, corpus, dictionary, os.path.join(result_dir, f'{model_name}.html'))
 
         values_dict[f'topic{i}'] = (get_perplexity(lda_model, corpus),
                                     get_coherence(lda_model, tokenized_article_series, dictionary))
@@ -174,7 +177,7 @@ def lda_explore_topic_number(setting: dict = None, tokenized_article_series: pd.
                                                         setting['result_model_dir'])
 
     # save_to_csv
-    explore_csv_path = setting['result_dir'] + 'lda__explore_topic_number.csv'
+    explore_csv_path = os.path.join(setting['result_dir'], 'lda__explore_topic_number.csv')
     recorder.ensure_parent_dir(explore_csv_path)
     values_df.to_csv(explore_csv_path, mode='w', encoding='utf-8',
                      header=['Perplexity', 'Coherence'], index_label='topic number')
@@ -182,12 +185,12 @@ def lda_explore_topic_number(setting: dict = None, tokenized_article_series: pd.
     # save_to_graph
     perplexity_list = values_df['perplexity'].tolist()
     draw_plot(perplexity_list, setting['topic_number_list'][0], setting['topic_number_list'][-1],
-              'Number of topics', 'Perplexity', setting['result_dir'] + 'lda__perplexity_value.png',
+              'Number of topics', 'Perplexity', os.path.join(setting['result_dir'], 'lda__perplexity_value.png'),
               setting['topic_number_list'])
 
     coherence_list = values_df['coherence'].tolist()
     draw_plot(coherence_list, setting['topic_number_list'][0], setting['topic_number_list'][-1],
-              'Number of topics', 'Coherence', setting['result_dir'] + 'lda__coherence_value.png',
+              'Number of topics', 'Coherence', os.path.join(setting['result_dir'], 'lda__coherence_value.png'),
               setting['topic_number_list'])
 
 

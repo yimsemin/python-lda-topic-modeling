@@ -9,15 +9,37 @@ import pandas as pd
 from wordcloud import WordCloud
 
 import util.recorder as recorder
+import util.token_parser as token_parser
 
 
-def _split_tokenized_article(line):
-    if isinstance(line, list):
-        return line
-    if line is None or pd.isna(line):
-        return []
+def _setting():
+    setting = {
+        # input
+        'xlsx_name': 'test/input/data.xlsx',
+        'sheet_name': 'preprocessed',                                   # 시트 이름 str 입력
+        'column_name': 'article',                                       # 전처리를 한 문서가 있는 열의 첫번째 행 이름 str 입력
+        # 1번째 행      article (제목 줄)
+        # 2번째 행      키워드,키워드,키워드,키워드 ...
+        # 3번째 행      키워드,키워드,키워드,키워드 ...
+        # 4번째 행      키워드,키워드,키워드,키워드 ...
+        # ...
 
-    return [word.strip() for word in str(line).split(',') if word.strip()]
+        # output
+        'result_csv_name': 'test/output/frequency_analysis.csv',        # 파일이 이미 존재하면 덮어씀
+        'result_word_cloud_name': 'test/output/word_cloud.png',         # 파일이 이미 존재하면 덮어씀
+        'word_cloud_font': 'font/NanumGothic.ttf',                      # 워드클라우드용 폰트
+        'min_word_count': 50                                            # n회 이하 나타난 단어는 결과에서 제거
+    }
+
+    excel_data = pd.read_excel(setting['xlsx_name'], sheet_name=setting['sheet_name'])[setting['column_name']]
+    tokenized_article_series = excel_data.map(token_parser.parse_tokenized_article)
+    # 0      [키워드, 키워드, 키워드 ...
+    # 1      [키워드, 키워드, 키워드 ...
+    # 2      [키워드, 키워드, 키워드 ...
+    # ...
+    # Name: article, Length: 000, dtype: object
+
+    return setting, tokenized_article_series
 
 
 def _get_available_word_cloud_font(my_font: str = 'font/NanumGothic.ttf'):
@@ -44,36 +66,6 @@ def _get_available_word_cloud_font(my_font: str = 'font/NanumGothic.ttf'):
 
     print('-- 대체 한글 폰트를 찾지 못해 기본 폰트로 워드클라우드를 생성합니다.')
     return None
-
-
-def _setting():
-    setting = {
-        # input
-        'xlsx_name': 'test/input/data.xlsx',
-        'sheet_name': 'preprocessed',                                   # 시트 이름 str 입력
-        'column_name': 'article',                                       # 전처리를 한 문서가 있는 열의 첫번째 행 이름 str 입력
-        # 1번째 행      article (제목 줄)
-        # 2번째 행      키워드,키워드,키워드,키워드 ...
-        # 3번째 행      키워드,키워드,키워드,키워드 ...
-        # 4번째 행      키워드,키워드,키워드,키워드 ...
-        # ...
-
-        # output
-        'result_csv_name': 'test/output/frequency_analysis.csv',        # 파일이 이미 존재하면 덮어씀
-        'result_word_cloud_name': 'test/output/word_cloud.png',         # 파일이 이미 존재하면 덮어씀
-        'word_cloud_font': 'font/NanumGothic.ttf',                      # 워드클라우드용 폰트
-        'min_word_count': 50                                            # n회 이하 나타난 단어는 결과에서 제거
-    }
-
-    excel_data = pd.read_excel(setting['xlsx_name'], sheet_name=setting['sheet_name'])[setting['column_name']]
-    tokenized_article_series = excel_data.map(_split_tokenized_article)
-    # 0      [키워드, 키워드, 키워드 ...
-    # 1      [키워드, 키워드, 키워드 ...
-    # 2      [키워드, 키워드, 키워드 ...
-    # ...
-    # Name: article, Length: 000, dtype: object
-
-    return setting, tokenized_article_series
 
 
 def count_frequency(tokenized_article_series: pd.Series, min_word_count: int = 50) -> pd.Series:
@@ -147,7 +139,7 @@ def frequency_analysis(setting: dict = None, tokenized_article_series: pd.Series
     elif tokenized_article_series is None:
         excel_data = pd.read_excel(setting['xlsx_name'],
                                    sheet_name=setting['sheet_name'])[setting['column_name']]
-        tokenized_article_series = excel_data.map(_split_tokenized_article)
+        tokenized_article_series = excel_data.map(token_parser.parse_tokenized_article)
 
     # frequency analysis
     frequency_result = count_frequency(tokenized_article_series, setting['min_word_count'])
