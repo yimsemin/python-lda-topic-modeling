@@ -51,6 +51,10 @@ python -m pip install -r requirements.txt
 
 주요 패키지 버전은 [requirements.txt](requirements.txt)를 참조합니다.
 
+### 포함 폰트
+
+워드클라우드 한글 렌더링을 위해 `font/NanumGothic.ttf`를 포함합니다. 해당 폰트는 SIL Open Font License 1.1로 배포되며, 라이선스 전문은 `font/OFL.txt`를 참조합니다.
+
 
 ## 3. 사용방법
 
