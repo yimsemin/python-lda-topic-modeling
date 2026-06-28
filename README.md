@@ -34,7 +34,7 @@
 
    - 각 문서의 토픽 별 θ 값 계산
    - y(θ) = ax(time) + b 의 선형 회귀분석
-   - Hot & Cold 토픽 제시
+   - Hot & Cold 토픽 제시 및 추세 그래프 저장
    - 시계열 열은 엑셀 날짜 서식, serial date, `YYYYMMDD`, `YYMMDD`, `YYYY-MM-DD`, `YYYY/MM/DD` 형식을 지원하며, 회귀분석에는 첫 날짜로부터의 일 단위 경과값을 사용
 
 ## 2. 실행환경

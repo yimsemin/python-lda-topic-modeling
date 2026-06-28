@@ -2,7 +2,12 @@
 """
 import datetime
 import os
+import tempfile
 
+os.environ.setdefault('MPLCONFIGDIR', os.path.join(tempfile.gettempdir(), 'matplotlib'))
+os.environ.setdefault('MPLBACKEND', 'Agg')
+
+import matplotlib.pyplot as plt
 import pandas as pd
 import statsmodels.api as sm
 from gensim.models import LdaModel
@@ -41,7 +46,7 @@ def _setting():
     return setting, lda_model, corpus, time_series
 
 
-def _get_date_series(time_series: pd.Series) -> pd.Series:
+def _get_date_series(time_series: pd.Series, log: bool = True) -> pd.Series:
     """ 입력된 시계열 값을 날짜로 복원한다. 복원 실패값은 NaT로 남긴다. """
     type_count = {}
     invalid_values = []
@@ -108,14 +113,15 @@ def _get_date_series(time_series: pd.Series) -> pd.Series:
         else:
             type_count[type_name] = type_count.get(type_name, 0) + 1
 
-    if type_count:
-        print('-- 날짜 해석 결과: ' + ', '.join([f'{key} {value}건' for key, value in type_count.items()]))
-    else:
-        print('-- 날짜 해석 결과: 해석 성공 없음')
-    if invalid_values:
-        print(f'-- 날짜 해석 실패: {len(invalid_values)}건')
-        for i, value in invalid_values[:5]:
-            print(f'---- 행 {i}: {value}')
+    if log:
+        if type_count:
+            print('-- 날짜 해석 결과: ' + ', '.join([f'{key} {value}건' for key, value in type_count.items()]))
+        else:
+            print('-- 날짜 해석 결과: 해석 성공 없음')
+        if invalid_values:
+            print(f'-- 날짜 해석 실패: {len(invalid_values)}건')
+            for i, value in invalid_values[:5]:
+                print(f'---- 행 {i}: {value}')
 
     return pd.Series(parsed_dates, name=time_series.name)
 
@@ -262,6 +268,39 @@ def check_hot_and_cold(time_and_theta_csv: str, column_name_seq: str = 'time'):
     return reg_results
 
 
+def save_hot_and_cold_plot(time_and_theta_df: pd.DataFrame, regression_results: pd.DataFrame,
+                           column_name_seq: str, save_graph_to: str):
+    hot_and_cold_topics = regression_results[regression_results['Hot.Cold'].isin(['Hot', 'Cold'])]
+    topic_cols = hot_and_cold_topics['y'].drop_duplicates().tolist()
+
+    plt.figure(figsize=(10, 6))
+    if topic_cols:
+        date_series = _get_date_series(time_and_theta_df[column_name_seq], log=False)
+        plot_df = time_and_theta_df.loc[date_series.notna(), topic_cols].copy()
+        plot_df[column_name_seq] = date_series.loc[date_series.notna()]
+        plot_df = plot_df.groupby(column_name_seq)[topic_cols].mean().sort_index()
+
+        for _, row in hot_and_cold_topics.drop_duplicates('y').iterrows():
+            topic_col = row['y']
+            line_style = '-' if row['Hot.Cold'] == 'Hot' else '--'
+            plt.plot(plot_df.index, plot_df[topic_col], marker='o', linestyle=line_style,
+                     label=f'{topic_col} ({row["Hot.Cold"]})')
+
+        plt.xlabel('Date')
+        plt.ylabel('Theta')
+        plt.legend()
+    else:
+        plt.text(0.5, 0.5, 'No significant Hot/Cold topics', ha='center', va='center')
+        plt.axis('off')
+
+    plt.title('Hot/Cold Topic Trends')
+    plt.tight_layout()
+    recorder.ensure_parent_dir(save_graph_to)
+    plt.savefig(save_graph_to)
+    plt.clf()
+    print(f'-- Hot/Cold 토픽 추세 그래프를 저장합니다: {save_graph_to}')
+
+
 def lda_hot_and_cold(setting: dict = None,
                      lda_model=None,
                      corpus=None,
@@ -296,7 +335,8 @@ def lda_hot_and_cold(setting: dict = None,
     recorder.ensure_parent_dir(hot_and_cold_csv_path)
     regression_results.to_csv(hot_and_cold_csv_path, index=True, index_label='id', mode='w', encoding='utf-8')
 
-    # TODO Hot, Cold 나눠서 추세를 그래프로 시각화하기
+    hot_and_cold_png_path = os.path.join(setting['result_dir'], 'hot_and_cold.png')
+    save_hot_and_cold_plot(time_and_theta_df, regression_results, setting['column_name_seq'], hot_and_cold_png_path)
 
 
 def main():
