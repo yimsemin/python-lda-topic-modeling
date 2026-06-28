@@ -1,7 +1,8 @@
 """ 시간과 토픽분포도의 회귀분석을 통해 토픽의 논의 추세를 파악함
 """
+import os
+
 import pandas as pd
-import patsy
 import statsmodels.api as sm
 from gensim.models import LdaModel
 
@@ -22,7 +23,7 @@ def _setting():
         'sheet_name_seq': 0,                                # 시계열 정보가 담긴 시트 이름 / 0 입력 -> 가장 왼쪽에 있는 시트를 선택
         'column_name_seq': "date",                          # 시계열 정보가 담긴 열 제목 (첫번째 행)
         'time_format': "%Y%m",
-        # 엑셀에서 '날짜' 서식으로 입력했다면, 위 date 형식으로 바꿔줌 / 필요 없다면 엑셀에서 '텍스트' 서식으로 입력할 것
+        # 엑셀 날짜 서식 또는 날짜 문자열이면 위 date 형식으로 바꿔줌 / 필요 없다면 엑셀에서 '텍스트' 서식으로 입력할 것
         # https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior
 
         # output
@@ -41,7 +42,15 @@ def _setting():
         time_series = time_series.dt.strftime(setting['time_format'])
         print('-- time_format을 적용합니다.')
     except AttributeError:
-        print('-- datetime format이 아니므로, 입력된 값을 그대로 사용합니다.')
+        if pd.api.types.is_numeric_dtype(time_series):
+            print('-- datetime format이 아니므로, 입력된 값을 그대로 사용합니다.')
+        else:
+            parsed_time_series = pd.to_datetime(time_series, errors='coerce')
+            if parsed_time_series.notna().all():
+                time_series = parsed_time_series.dt.strftime(setting['time_format'])
+                print('-- time_format을 적용합니다.')
+            else:
+                print('-- datetime format이 아니므로, 입력된 값을 그대로 사용합니다.')
 
     return setting, lda_model, corpus, time_series
 
@@ -61,30 +70,32 @@ def get_theta_for_each_article_each_topic(lda_model, corpus) -> (pd.DataFrame, p
     dominant_topics = {}
     for i in range(len(corpus)):
         topic_num_and_theta_values = lda_model.get_document_topics(corpus[i], 0.0)
+        topic_num_and_theta_values = sorted(topic_num_and_theta_values, key=lambda x: x[0])
         # [(0, 0.0002553786), (1, 0.006252744), (2, 0.0002553786), (3, 0.0002553786), ... ]
 
         # 가장 theta 값이 높은 토픽을 도출
-        dominant_topics[i] = f'topic{sorted(topic_num_and_theta_values, key=lambda x: (x[1]), reverse=True)[0][0] + 1}'
+        dominant_topic_num = max(topic_num_and_theta_values, key=lambda x: x[1])[0]
+        dominant_topics[i] = f'topic{dominant_topic_num}'
 
         # theta 값만 토픽 순으로 뽑아내기
-        theta_values[i] = [i[1] for i in topic_num_and_theta_values]
+        theta_values[i] = [theta for _, theta in topic_num_and_theta_values]
         # { 0 : [0.0002553786, 0.006252744, 0.0002553786, 0.0002553786, 0.0002553786, ... ],
         #   1 : [] [] ... ,
         #   2 : [] [] ... }
 
     # 문서별 가장 비중이 높은 토픽을 pd.Series로 저장
     dominant_topics_series = pd.Series(dominant_topics, name='dominant_topic')
-    # 0    topic13
-    # 1     topic5
-    # 2    topic18
-    # 3     topic5
+    # 0    topic12
+    # 1     topic4
+    # 2    topic17
+    # 3     topic4
     # ...
     # Name: dominant_topic, dtype: object
 
     # 문서별 토픽별 theta 값을 DataFrame으로 저장
     header = [f'topic{i}' for i in range(len(theta_values[0]))]
     theta_values_df = pd.DataFrame.from_dict(theta_values, orient='index', columns=header)
-    #          topic1    topic2    topic3  ...   topic18   topic19   topic20
+    #          topic0    topic1    topic2  ...   topic17   topic18   topic19
     # 0      0.000255  0.006253  0.000255  ...  0.000255  0.000255  0.000255
     # 1      0.000981  0.000981  0.000981  ...  0.000981  0.000981  0.000981
     # 2      0.000336  0.000336  0.000336  ...  0.532007  0.000336  0.000336
@@ -117,7 +128,7 @@ def get_linear_regression_results(reg_model) -> pd.DataFrame:
     """ result.summary() 에서 회귀분석이 통계적으로 유의한지 확인하는데 필요한 값들만 추출
 
     Args:
-        reg_model: sm.OLS.from_formula('y ~ x', data).fit()
+        reg_model: sm.OLS(y, x).fit()
 
     Returns:
         상수 제외 x -> y 의 주요 통계값들
@@ -141,28 +152,38 @@ def get_linear_regression_results(reg_model) -> pd.DataFrame:
     #       F_value  F_p_value  r_squared  ...   p_value  conf_lower  conf_higher
     # time   1.7177   0.191071   0.006141  ...  0.191071   -0.035879     0.007199
     # 위 index의 time은 독립변수 x를 의미함
-    return reg_result.drop(['Intercept'])
+    intercept_names = [name for name in ['Intercept', 'const'] if name in reg_result.index]
+    return reg_result.drop(intercept_names)
 
 
 def check_hot_and_cold(time_and_theta_csv: str, column_name_seq: str = 'time'):
     # 토픽별 회귀분석
     df = pd.read_csv(time_and_theta_csv)
+    time_series = pd.to_numeric(df[column_name_seq], errors='coerce')
+    if time_series.isna().any():
+        time_series = pd.to_datetime(df[column_name_seq], errors='coerce')
+        if time_series.isna().any():
+            raise ValueError(f'{column_name_seq} 열은 숫자 또는 날짜로 해석 가능해야 합니다.')
+        # 선형회귀에는 연속형 숫자가 필요하므로 날짜는 일 단위 숫자로 변환한다.
+        time_series = time_series.map(lambda x: x.toordinal())
+    df[column_name_seq] = time_series
+
     reg_results = pd.DataFrame()
     topic = 0
-    while True:
-        try:
-            reg_model = sm.OLS.from_formula(f'topic{topic} ~ {column_name_seq}', df).fit()
-            reg_result = get_linear_regression_results(reg_model)
+    while f'topic{topic}' in df.columns:
+        topic_col = f'topic{topic}'
+        x = sm.add_constant(df[[column_name_seq]], has_constant='add')
+        reg_model = sm.OLS(df[topic_col], x).fit()
+        reg_result = get_linear_regression_results(reg_model)
 
-            topic += 1
+        # 표가 보기 좋도록 토픽명 추가
+        reg_result.insert(0, 'y', [topic_col] * len(reg_result))
+        reg_results = pd.concat([reg_results, reg_result], axis=0)
 
-            # 표가 보기 좋도록 토픽명 추가
-            reg_result.insert(0, 'y', [f'topic{topic}'])
-            reg_results = pd.concat([reg_results, reg_result], axis=0)
+        topic += 1
 
-        # topic'n'이 존재하지 않는 경우
-        except patsy.PatsyError:
-            break
+    if reg_results.empty:
+        return reg_results
 
     # Hot/Cold 표기
     reg_results['Hot.Cold'] = reg_results['co_eff'].apply(lambda x: 'Hot' if x > 0 else 'Cold')
@@ -182,23 +203,28 @@ def lda_hot_and_cold(setting: dict = None,
 
     # 데이터 셋팅 - 선형회귀 및 비중
     theta_values_df, dominant_topics_series = get_theta_for_each_article_each_topic(lda_model, corpus)
+    time_series = pd.Series(time_series).reset_index(drop=True)
+    time_series.name = setting['column_name_seq']
+    if len(time_series) != len(theta_values_df):
+        raise ValueError(f'문서 수({len(theta_values_df)})와 시계열 값 수({len(time_series)})가 다릅니다.')
+
     time_and_theta_df = pd.concat([time_series, theta_values_df, dominant_topics_series], axis=1)
-    #        date    topic0    topic1  ...   topic19   topic20  dominant_topic
-    # 0         6  0.000255  0.006253  ...  0.000255  0.000255         topic13
-    # 1         6  0.000981  0.000981  ...  0.000981  0.000981          topic5
-    # 2         6  0.000336  0.000336  ...  0.000336  0.000336         topic18
+    #        date    topic0    topic1  ...   topic18   topic19  dominant_topic
+    # 0         6  0.000255  0.006253  ...  0.000255  0.000255         topic12
+    # 1         6  0.000981  0.000981  ...  0.000981  0.000981          topic4
+    # 2         6  0.000336  0.000336  ...  0.000336  0.000336         topic17
     # ...     ...       ...       ...  ...       ...       ...             ...
 
     # 분석한 데이터 저장
-    time_and_theta_csv_path = setting['result_dir'] + 'time_and_theta.csv'
+    time_and_theta_csv_path = os.path.join(setting['result_dir'], 'time_and_theta.csv')
     recorder.ensure_parent_dir(time_and_theta_csv_path)
-    time_and_theta_df.to_csv(time_and_theta_csv_path, index=True, index_label='id', mode='w')
+    time_and_theta_df.to_csv(time_and_theta_csv_path, index=True, index_label='id', mode='w', encoding='utf-8')
 
     # 선형 회귀분석
     regression_results = check_hot_and_cold(time_and_theta_csv_path, setting['column_name_seq'])
-    hot_and_cold_csv_path = setting['result_dir'] + 'hot_and_cold.csv'
+    hot_and_cold_csv_path = os.path.join(setting['result_dir'], 'hot_and_cold.csv')
     recorder.ensure_parent_dir(hot_and_cold_csv_path)
-    regression_results.to_csv(hot_and_cold_csv_path, index=True, index_label='id', mode='w')
+    regression_results.to_csv(hot_and_cold_csv_path, index=True, index_label='id', mode='w', encoding='utf-8')
 
     # TODO Hot, Cold 나눠서 추세를 그래프로 시각화하기
 
