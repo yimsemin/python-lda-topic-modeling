@@ -1,6 +1,11 @@
 """ 최적의 토픽 갯수 k를 찾기 위해 LDA 모델들의 혼란도(perplexity)와 응집도(coherence)를 조사함
 """
 import os
+import tempfile
+
+os.environ.setdefault('MPLCONFIGDIR', os.path.join(tempfile.gettempdir(), 'matplotlib'))
+os.environ.setdefault('MPLBACKEND', 'Agg')
+
 import pandas as pd
 import matplotlib.pyplot as plt
 from gensim.models import CoherenceModel
@@ -33,6 +38,9 @@ def _setting():
         'random_state': 4190
     }
 
+    if setting['topic_number_interval'] == 0:
+        raise ValueError('topic_number_interval은 0일 수 없습니다.')
+
     excel_data = pd.read_excel(setting['xlsx_name'], sheet_name=setting['sheet_name'])[setting['column_name']]
     tokenized_article_series = excel_data.map(token_parser.parse_tokenized_article)
     # 0      [키워드, 키워드, 키워드 ...
@@ -44,6 +52,8 @@ def _setting():
     setting['topic_number_list'] = list(range(setting['topic_number_start'],
                                               setting['topic_number_end'] + 1,
                                               setting['topic_number_interval']))
+    if not setting['topic_number_list']:
+        raise ValueError('조사할 토픽 갯수 범위가 비어 있습니다. start, end, interval 설정을 확인하세요.')
 
     return setting, tokenized_article_series
 
@@ -135,6 +145,8 @@ def get_perplexity_and_coherence_value_list(tokenized_article_series, corpus, di
     for i in tqdm(topic_number_list):
         model_name = lda.get_lda_model_name(i, random_state)
         model_path = os.path.join(model_dir, model_name)
+        html_path = os.path.join(result_dir, f'{model_name}.html')
+        new_model_created = False
         try:
             lda_model, loaded_model_name = lda.load_lda_model(model_dir, i, random_state)
             if loaded_model_name != model_name:
@@ -145,7 +157,10 @@ def get_perplexity_and_coherence_value_list(tokenized_article_series, corpus, di
             lda_model = LdaModel(corpus=corpus, num_topics=i, id2word=dictionary,
                                  passes=20, iterations=iterations, random_state=random_state)
             lda_model.save(model_path)
-            lda.save_lda_html(lda_model, corpus, dictionary, os.path.join(result_dir, f'{model_name}.html'))
+            new_model_created = True
+
+        if new_model_created or not os.path.exists(html_path):
+            lda.save_lda_html(lda_model, corpus, dictionary, html_path)
 
         values_dict[f'topic{i}'] = (get_perplexity(lda_model, corpus),
                                     get_coherence(lda_model, tokenized_article_series, dictionary))
@@ -165,6 +180,15 @@ def lda_explore_topic_number(setting: dict = None, tokenized_article_series: pd.
     # setting
     if setting is None or tokenized_article_series is None:
         setting, tokenized_article_series = _setting()
+    elif 'topic_number_list' not in setting:
+        if setting['topic_number_interval'] == 0:
+            raise ValueError('topic_number_interval은 0일 수 없습니다.')
+        setting['topic_number_list'] = list(range(setting['topic_number_start'],
+                                                  setting['topic_number_end'] + 1,
+                                                  setting['topic_number_interval']))
+
+    if not setting['topic_number_list']:
+        raise ValueError('조사할 토픽 갯수 범위가 비어 있습니다. start, end, interval 설정을 확인하세요.')
 
     corpus, dictionary = lda.get_corpus_and_dictionary(tokenized_article_series, setting['result_dir'])
 
