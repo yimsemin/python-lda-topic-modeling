@@ -12,21 +12,13 @@ import util.token_parser as token_parser
 
 def _setting():
     setting = {
-        # input - 전처리를 수행할 엑셀파일
         'xlsx_name': 'test/input/data.xlsx',
-        'sheet_name': 0,                                # 시트 이름 str 입력 / 0 입력 -> 가장 왼쪽에 있는 시트를 선택
-        'column_name': 'article',                       # 전처리 대상 문서가 있는 열의 첫번째 행 이름 str 입력
-        # 1번째 행     article (제목 줄)
-        # 2번째 행     1줄에 1개의 문서 ...
-        # 3번째 행     1줄에 1개의 문서 ...
-        # 4번째 행     1줄에 1개의 문서 ...
-        # ...
-
-        'stopwordlist_location': 'test/input/stopwordlist.txt',  # 불용어 사전 위치
-
-        # output - 전처리 결과에 대한 설정
-        'result_sheet_name': 'preprocessed',            # 결과를 저장할 시트 이름 / 시트가 이미 존재하면 덮어씀
-        'min_word_count': 50                            # n회 이하 나타난 단어는 삭제함
+        'sheet_name': 0,
+        'column_name': 'article',
+        'stopwordlist_location': 'test/input/stopwordlist.txt',
+        'result_sheet_name': 'preprocessed',
+        'empty_document_csv_name': 'test/output/preprocessing_empty_documents.csv',
+        'min_word_count': 50
     }
 
     article_series = pd.read_excel(setting['xlsx_name'], sheet_name=setting['sheet_name'])[setting['column_name']]
@@ -81,7 +73,7 @@ def extract_noun_from_each_article(article_series: pd.Series, stopwords: Stopwor
     Returns:
         (pd.Series) 한 줄에 명사만 추출된(토큰화된) 문서 하나씩
     """
-    tqdm.pandas()
+    tqdm.pandas(desc='명사 추출', unit='문서')
     kiwi = Kiwi()
     target_tags = {'NNG', 'NNP'}
 
@@ -113,7 +105,7 @@ def remove_stop_words_from_each_article(tokenized_article_series: pd.Series,
     Returns:
         (pd.Series) 한 줄에 특정 키워드가 제거된 문서 하나씩
     """
-    tqdm.pandas()
+    tqdm.pandas(desc='키워드 제거', unit='문서')
 
     # 함수 이름의 stop_words는 과거 호환을 위해 유지한다.
     try:
@@ -165,7 +157,7 @@ def remove_one_character_from_each_article(tokenized_article_series) -> pd.Serie
     Returns:
         (pd.Series) 한 줄에 한 글자 단어가 제거된 문서 하나씩
     """
-    tqdm.pandas()
+    tqdm.pandas(desc='한 글자 단어 제거', unit='문서')
 
     return tokenized_article_series.progress_map(lambda line: [word for word in line if len(word) > 1])
 
@@ -199,7 +191,8 @@ def remove_low_count_word(tokenized_article_series, min_word_count: int = 50) ->
 
         delete_word = set(deleted_word_count_series.index.tolist())
 
-        return pd.Series([[i for i in article if i not in delete_word] for article in tqdm(tokenized_article_series)],
+        return pd.Series([[i for i in article if i not in delete_word]
+                          for article in tqdm(tokenized_article_series, desc='저빈도 단어 제거', unit='문서')],
                          index=tokenized_article_series.index,
                          name=tokenized_article_series.name)
 
@@ -240,6 +233,13 @@ def preprocessing_noun(setting: dict = None, article_series: pd.Series = None):
         '-- 안내: 빈 문서는 삭제하지 않고 저장합니다. 이후 LDA 계열 분석에서 의미 없는 토픽 분포로 반영될 수 있습니다.',
         source_series=article_series
     )
+    empty_document_csv_name = setting.get('empty_document_csv_name')
+    if empty_document_csv_name is not None:
+        empty_document_report = token_parser.get_empty_document_report(tokenized_article_series,
+                                                                       source_series=article_series)
+        recorder.ensure_parent_dir(empty_document_csv_name)
+        empty_document_report.to_csv(empty_document_csv_name, index=False, mode='w', encoding='utf-8')
+        print(f'-- 빈 문서 검토 파일을 저장합니다: {empty_document_csv_name}')
     # TODO: 'n개 이하의 문서에서만 등장한 단어 제거' 추가
 
     # save result

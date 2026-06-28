@@ -33,6 +33,22 @@ def get_empty_document_indices(tokenized_article_series):
     return tokenized_article_series[tokenized_article_series.map(len) == 0].index.tolist()
 
 
+def get_empty_document_report(tokenized_article_series, source_series=None, preview_length: int = 80) -> pd.DataFrame:
+    if source_series is None:
+        source_series = getattr(tokenized_article_series, 'attrs', {}).get('source_series')
+
+    rows = []
+    for index in get_empty_document_indices(tokenized_article_series):
+        excel_row_number = index + 2 if isinstance(index, numbers.Integral) else ''
+        rows.append({
+            'pandas_index': index,
+            'excel_row_number': excel_row_number,
+            'source_preview': _get_source_preview(source_series, index, preview_length)
+        })
+
+    return pd.DataFrame(rows, columns=['pandas_index', 'excel_row_number', 'source_preview'])
+
+
 def _get_source_preview(source_series, index, preview_length: int) -> str:
     if source_series is None:
         return ''

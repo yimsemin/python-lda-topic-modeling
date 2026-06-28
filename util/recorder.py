@@ -5,9 +5,19 @@ with 구문 속 작업에 대해
 2) 코드 진행 시간을 기록 - with WithTimeRecorder('task_name'):
 
 """
+import os
 import sys
 import datetime
 import time
+
+
+def ensure_dir(dir_path: str):
+    if dir_path:
+        os.makedirs(dir_path, exist_ok=True)
+
+
+def ensure_parent_dir(file_path: str):
+    ensure_dir(os.path.dirname(file_path))
 
 
 class WithTxtRecorder(object):
@@ -24,6 +34,7 @@ class WithTxtRecorder(object):
         self.encoding = encoding
 
     def __enter__(self):
+        ensure_parent_dir(self.file_name)
         self.f = open(self.file_name, self.how, encoding=self.encoding)
         return self.f
 

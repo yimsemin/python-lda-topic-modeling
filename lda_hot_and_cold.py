@@ -18,31 +18,22 @@ import util.token_parser as token_parser
 
 
 def _setting():
-    setting = _default_setting()
+    setting = {
+        'lda_model': 'test/output/model/lda_k_10_rd_4190',
+        'xlsx_name': 'test/input/data.xlsx',
+        'sheet_name': 'preprocessed',
+        'column_name': 'article',
+        'sheet_name_seq': 0,
+        'column_name_seq': "date",
+        'result_dir': 'test/output/',
+        'reuse_saved_corpus': True
+    }
 
     lda_model = _load_lda_model(setting)
     corpus = _load_corpus(setting)
     time_series = _read_time_series(setting)
 
     return setting, lda_model, corpus, time_series
-
-
-def _default_setting():
-    return {
-        # input
-        'lda_model': 'test/output/model/lda_k_10_rd_4190',  # 분석할 모델명을 기술
-
-        'xlsx_name': 'test/input/data.xlsx',
-        'sheet_name': 'preprocessed',
-        'column_name': 'article',
-
-        'sheet_name_seq': 0,                                # 시계열 정보가 담긴 시트 이름 / 0 입력 -> 가장 왼쪽에 있는 시트를 선택
-        'column_name_seq': "date",                          # 시계열 정보가 담긴 열 제목 (첫번째 행)
-        # 날짜는 엑셀 날짜 서식, serial date, YYYYMMDD, YYMMDD, YYYY-MM-DD, YYYY/MM/DD 형식을 지원
-
-        # output
-        'result_dir': 'test/output/'
-    }
 
 
 def _load_lda_model(setting):
@@ -57,7 +48,8 @@ def _read_tokenized_article_series(setting):
 def _load_corpus(setting):
     # get corpus
     tokenized_article_series = _read_tokenized_article_series(setting)
-    corpus, _ = lda.get_corpus_and_dictionary(tokenized_article_series, setting['result_dir'])
+    corpus, _ = lda.get_corpus_and_dictionary(tokenized_article_series, setting['result_dir'],
+                                              setting.get('reuse_saved_corpus', True))
     return corpus
 
 
@@ -326,17 +318,18 @@ def lda_hot_and_cold(setting: dict = None,
                      time_series=None):
     # setting
     if setting is None:
-        setting = _default_setting()
+        default_setting, default_lda_model, default_corpus, default_time_series = _setting()
+        setting = default_setting
         print('-- _setting() 기본 설정값을 사용합니다.')
         if lda_model is None:
             print('-- _setting() 기본 LDA 모델을 사용합니다.')
-            lda_model = _load_lda_model(setting)
+            lda_model = default_lda_model
         if corpus is None:
             print('-- _setting() 기본 corpus를 사용합니다.')
-            corpus = _load_corpus(setting)
+            corpus = default_corpus
         if time_series is None:
             print('-- _setting() 기본 시계열 데이터를 사용합니다.')
-            time_series = _read_time_series(setting)
+            time_series = default_time_series
     else:
         if lda_model is None:
             print('-- 전달된 setting의 lda_model에서 LDA 모델을 읽습니다.')
