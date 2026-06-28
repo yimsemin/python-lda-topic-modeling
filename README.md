@@ -10,6 +10,7 @@
    - `kiwipiepy` 기본 불용어 + 사용자 정의 불용어 제거
      (`test/input/stopwordlist.txt`에 `단어/품사` 형식으로 작성, 품사 생략 시 `NNG`로 처리)
    - 적게 등장한 단어 제거
+   - 빈 문서는 삭제하지 않고 pandas index와 원문 일부를 로그로 안내
 
 2. 빈도수 분석 `frequency_analysis.py`
 

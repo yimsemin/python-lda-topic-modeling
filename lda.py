@@ -37,7 +37,7 @@ def _setting():
     }
 
     excel_data = pd.read_excel(setting['xlsx_name'], sheet_name=setting['sheet_name'])[setting['column_name']]
-    tokenized_article_series = excel_data.map(token_parser.parse_tokenized_article)
+    tokenized_article_series = token_parser.parse_tokenized_series(excel_data)
     # 0      [키워드, 키워드, 키워드 ...
     # 1      [키워드, 키워드, 키워드 ...
     # 2      [키워드, 키워드, 키워드 ...
@@ -48,7 +48,14 @@ def _setting():
 
 
 def get_corpus_and_dictionary(tokenized_article_series, save_path: str = 'test/output/'):
+    source_series = getattr(tokenized_article_series, 'attrs', {}).get('source_series')
     tokenized_article_series = pd.Series(tokenized_article_series).map(token_parser.parse_tokenized_article)
+    token_parser.log_empty_documents(
+        tokenized_article_series,
+        'LDA 분석 입력',
+        '-- 빈 문서를 포함한 상태로 LDA 분석을 계속 진행합니다.',
+        source_series=source_series
+    )
 
     if save_path is not None:
         recorder.ensure_dir(save_path)

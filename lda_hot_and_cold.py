@@ -33,7 +33,7 @@ def _setting():
 
     # get corpus
     excel_data = pd.read_excel(setting['xlsx_name'], sheet_name=setting['sheet_name'])[setting['column_name']]
-    tokenized_article_series = excel_data.map(token_parser.parse_tokenized_article)
+    tokenized_article_series = token_parser.parse_tokenized_series(excel_data)
     corpus, _ = lda.get_corpus_and_dictionary(tokenized_article_series, setting['result_dir'])
 
     time_series = pd.read_excel(setting['xlsx_name'], sheet_name=setting['sheet_name_seq'])[setting['column_name_seq']]

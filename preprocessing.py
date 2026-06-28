@@ -7,6 +7,7 @@ from kiwipiepy import Kiwi
 from kiwipiepy.utils import Stopwords
 
 import util.recorder as recorder
+import util.token_parser as token_parser
 
 
 def _setting():
@@ -233,7 +234,12 @@ def preprocessing_noun(setting: dict = None, article_series: pd.Series = None):
     # ...
     # Name: article, Length: 000, dtype: object
 
-    # TODO 모든 단어가 삭제되었을 때 비어버린 문서 처리
+    token_parser.log_empty_documents(
+        tokenized_article_series,
+        '전처리 결과',
+        '-- 안내: 빈 문서는 삭제하지 않고 저장합니다. 이후 LDA 계열 분석에서 의미 없는 토픽 분포로 반영될 수 있습니다.',
+        source_series=article_series
+    )
     # TODO: 'n개 이하의 문서에서만 등장한 단어 제거' 추가
 
     # save result
