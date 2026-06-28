@@ -18,7 +18,22 @@ import util.token_parser as token_parser
 
 
 def _setting():
-    setting = {
+    setting = _default_setting()
+
+    tokenized_article_series = _read_tokenized_article_series(setting)
+    # 0      [키워드, 키워드, 키워드 ...
+    # 1      [키워드, 키워드, 키워드 ...
+    # 2      [키워드, 키워드, 키워드 ...
+    # ...
+    # Name: article, Length: 000, dtype: object
+
+    _ensure_topic_number_list(setting)
+
+    return setting, tokenized_article_series
+
+
+def _default_setting():
+    return {
         # input
         'xlsx_name': 'test/input/data.xlsx',
         'sheet_name': 'preprocessed',
@@ -38,24 +53,22 @@ def _setting():
         'random_state': 4190
     }
 
-    if setting['topic_number_interval'] == 0:
-        raise ValueError('topic_number_interval은 0일 수 없습니다.')
 
+def _read_tokenized_article_series(setting):
     excel_data = pd.read_excel(setting['xlsx_name'], sheet_name=setting['sheet_name'])[setting['column_name']]
-    tokenized_article_series = token_parser.parse_tokenized_series(excel_data)
-    # 0      [키워드, 키워드, 키워드 ...
-    # 1      [키워드, 키워드, 키워드 ...
-    # 2      [키워드, 키워드, 키워드 ...
-    # ...
-    # Name: article, Length: 000, dtype: object
+    return token_parser.parse_tokenized_series(excel_data)
 
-    setting['topic_number_list'] = list(range(setting['topic_number_start'],
-                                              setting['topic_number_end'] + 1,
-                                              setting['topic_number_interval']))
+
+def _ensure_topic_number_list(setting):
+    if 'topic_number_list' not in setting:
+        if setting['topic_number_interval'] == 0:
+            raise ValueError('topic_number_interval은 0일 수 없습니다.')
+        setting['topic_number_list'] = list(range(setting['topic_number_start'],
+                                                  setting['topic_number_end'] + 1,
+                                                  setting['topic_number_interval']))
+
     if not setting['topic_number_list']:
         raise ValueError('조사할 토픽 갯수 범위가 비어 있습니다. start, end, interval 설정을 확인하세요.')
-
-    return setting, tokenized_article_series
 
 
 def get_perplexity(lda_model, corpus):
@@ -178,17 +191,17 @@ def get_perplexity_and_coherence_value_list(tokenized_article_series, corpus, di
 
 def lda_explore_topic_number(setting: dict = None, tokenized_article_series: pd.Series = None):
     # setting
-    if setting is None or tokenized_article_series is None:
-        setting, tokenized_article_series = _setting()
-    elif 'topic_number_list' not in setting:
-        if setting['topic_number_interval'] == 0:
-            raise ValueError('topic_number_interval은 0일 수 없습니다.')
-        setting['topic_number_list'] = list(range(setting['topic_number_start'],
-                                                  setting['topic_number_end'] + 1,
-                                                  setting['topic_number_interval']))
+    if setting is None:
+        setting = _default_setting()
+        print('-- _setting() 기본 설정값을 사용합니다.')
+        if tokenized_article_series is None:
+            print('-- _setting() 기본 입력 데이터를 사용합니다.')
+            tokenized_article_series = _read_tokenized_article_series(setting)
+    elif tokenized_article_series is None:
+        print('-- 전달된 setting의 입력 파일에서 LDA 토픽 갯수 탐색 입력 데이터를 읽습니다.')
+        tokenized_article_series = _read_tokenized_article_series(setting)
 
-    if not setting['topic_number_list']:
-        raise ValueError('조사할 토픽 갯수 범위가 비어 있습니다. start, end, interval 설정을 확인하세요.')
+    _ensure_topic_number_list(setting)
 
     corpus, dictionary = lda.get_corpus_and_dictionary(tokenized_article_series, setting['result_dir'])
 

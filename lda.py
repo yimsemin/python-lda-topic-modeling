@@ -17,7 +17,21 @@ import util.token_parser as token_parser
 
 def _setting():
     # input
-    setting = {
+    setting = _default_setting()
+
+    tokenized_article_series = _read_tokenized_article_series(setting)
+    # 0      [키워드, 키워드, 키워드 ...
+    # 1      [키워드, 키워드, 키워드 ...
+    # 2      [키워드, 키워드, 키워드 ...
+    # ...
+    # Name: article, Length: 000, dtype: object
+
+    return setting, tokenized_article_series
+
+
+def _default_setting():
+    # input
+    return {
         'xlsx_name': 'test/input/data.xlsx',
         'sheet_name': 'preprocessed',
         'column_name': 'article',
@@ -36,15 +50,10 @@ def _setting():
         'random_state': 4190
     }
 
-    excel_data = pd.read_excel(setting['xlsx_name'], sheet_name=setting['sheet_name'])[setting['column_name']]
-    tokenized_article_series = token_parser.parse_tokenized_series(excel_data)
-    # 0      [키워드, 키워드, 키워드 ...
-    # 1      [키워드, 키워드, 키워드 ...
-    # 2      [키워드, 키워드, 키워드 ...
-    # ...
-    # Name: article, Length: 000, dtype: object
 
-    return setting, tokenized_article_series
+def _read_tokenized_article_series(setting):
+    excel_data = pd.read_excel(setting['xlsx_name'], sheet_name=setting['sheet_name'])[setting['column_name']]
+    return token_parser.parse_tokenized_series(excel_data)
 
 
 def get_corpus_and_dictionary(tokenized_article_series, save_path: str = 'test/output/'):
@@ -171,8 +180,15 @@ def lda_modeling(setting=None, tokenized_article_series=None):
     tqdm.pandas()
 
     # setting
-    if setting is None or tokenized_article_series is None:
-        setting, tokenized_article_series = _setting()
+    if setting is None:
+        setting = _default_setting()
+        print('-- _setting() 기본 설정값을 사용합니다.')
+        if tokenized_article_series is None:
+            print('-- _setting() 기본 입력 데이터를 사용합니다.')
+            tokenized_article_series = _read_tokenized_article_series(setting)
+    elif tokenized_article_series is None:
+        print('-- 전달된 setting의 입력 파일에서 LDA 분석 입력 데이터를 읽습니다.')
+        tokenized_article_series = _read_tokenized_article_series(setting)
 
     corpus, dictionary = get_corpus_and_dictionary(tokenized_article_series, setting['result_dir'])
     iterations, random_state = setting['iterations'], setting['random_state']

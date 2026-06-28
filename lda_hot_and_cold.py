@@ -18,7 +18,17 @@ import util.token_parser as token_parser
 
 
 def _setting():
-    setting = {
+    setting = _default_setting()
+
+    lda_model = _load_lda_model(setting)
+    corpus = _load_corpus(setting)
+    time_series = _read_time_series(setting)
+
+    return setting, lda_model, corpus, time_series
+
+
+def _default_setting():
+    return {
         # input
         'lda_model': 'test/output/model/lda_k_10_rd_4190',  # 분석할 모델명을 기술
 
@@ -34,16 +44,26 @@ def _setting():
         'result_dir': 'test/output/'
     }
 
-    lda_model = LdaModel.load(setting['lda_model'])
 
-    # get corpus
+def _load_lda_model(setting):
+    return LdaModel.load(setting['lda_model'])
+
+
+def _read_tokenized_article_series(setting):
     excel_data = pd.read_excel(setting['xlsx_name'], sheet_name=setting['sheet_name'])[setting['column_name']]
-    tokenized_article_series = token_parser.parse_tokenized_series(excel_data)
+    return token_parser.parse_tokenized_series(excel_data)
+
+
+def _load_corpus(setting):
+    # get corpus
+    tokenized_article_series = _read_tokenized_article_series(setting)
     corpus, _ = lda.get_corpus_and_dictionary(tokenized_article_series, setting['result_dir'])
+    return corpus
 
+
+def _read_time_series(setting):
     time_series = pd.read_excel(setting['xlsx_name'], sheet_name=setting['sheet_name_seq'])[setting['column_name_seq']]
-
-    return setting, lda_model, corpus, time_series
+    return time_series
 
 
 def _get_date_series(time_series: pd.Series, log: bool = True) -> pd.Series:
@@ -179,7 +199,6 @@ def get_example_for_each_topic(f_path='test/output/time_and_theta.csv',
                                save_result_to='test/output/example_article.txt',
                                topic_start_num=0, topic_last_num=20):
     # 각 토픽별 대표 문서 추출
-    # Todo time이랑 theta를 한 함수에 둘 필요가 없음... 구분 필요
 
     df = pd.read_csv(f_path)
 
@@ -306,9 +325,28 @@ def lda_hot_and_cold(setting: dict = None,
                      corpus=None,
                      time_series=None):
     # setting
-    if setting is None or lda_model is None or corpus is None or time_series is None:
-        print('기본 셋팅으로 진행')
-        setting, lda_model, corpus, time_series = _setting()
+    if setting is None:
+        setting = _default_setting()
+        print('-- _setting() 기본 설정값을 사용합니다.')
+        if lda_model is None:
+            print('-- _setting() 기본 LDA 모델을 사용합니다.')
+            lda_model = _load_lda_model(setting)
+        if corpus is None:
+            print('-- _setting() 기본 corpus를 사용합니다.')
+            corpus = _load_corpus(setting)
+        if time_series is None:
+            print('-- _setting() 기본 시계열 데이터를 사용합니다.')
+            time_series = _read_time_series(setting)
+    else:
+        if lda_model is None:
+            print('-- 전달된 setting의 lda_model에서 LDA 모델을 읽습니다.')
+            lda_model = _load_lda_model(setting)
+        if corpus is None:
+            print('-- 전달된 setting의 입력 파일에서 corpus를 생성/불러옵니다.')
+            corpus = _load_corpus(setting)
+        if time_series is None:
+            print('-- 전달된 setting의 입력 파일에서 시계열 데이터를 읽습니다.')
+            time_series = _read_time_series(setting)
 
     # 데이터 셋팅 - 선형회귀 및 비중
     theta_values_df, dominant_topics_series = get_theta_for_each_article_each_topic(lda_model, corpus)
