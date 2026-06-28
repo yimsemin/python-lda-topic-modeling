@@ -42,6 +42,7 @@ def _default_setting():
         # output
         'result_dir': 'test/output/',
         'result_model_dir': 'test/output/model/',
+        'save_explore_html': True,
 
         # 조사할 토픽 갯수 범위
         'topic_number_start': 2,
@@ -134,7 +135,8 @@ def get_perplexity_and_coherence_value_list(tokenized_article_series, corpus, di
                                             iterations: int = 100,
                                             random_state: int = 4190,
                                             result_dir: str = 'test/output/',
-                                            model_dir: str = 'test/output/model/') -> pd.DataFrame:
+                                            model_dir: str = 'test/output/model/',
+                                            save_html: bool = True) -> pd.DataFrame:
     """
 
     Args:
@@ -146,6 +148,7 @@ def get_perplexity_and_coherence_value_list(tokenized_article_series, corpus, di
         random_state: LDA 모델 계산 시 random_state
         result_dir: 계산과정에서 도출된 LDA 토픽 시각화(html) 결과 저장 위치
         model_dir: 계산과정에서 도출된 LDA 모델 저장 위치
+        save_html: 계산과정에서 도출된 LDA 토픽 시각화(html) 저장 여부
 
     Returns:
         (pd.DataFrame) 토픽 갯수 별 perplexity 및 coherence 값
@@ -172,11 +175,14 @@ def get_perplexity_and_coherence_value_list(tokenized_article_series, corpus, di
             lda_model.save(model_path)
             new_model_created = True
 
-        if new_model_created or not os.path.exists(html_path):
-            lda.save_lda_html(lda_model, corpus, dictionary, html_path)
-
         values_dict[f'topic{i}'] = (get_perplexity(lda_model, corpus),
                                     get_coherence(lda_model, tokenized_article_series, dictionary))
+
+        if save_html and (new_model_created or not os.path.exists(html_path)):
+            try:
+                lda.save_lda_html(lda_model, corpus, dictionary, html_path)
+            except Exception as e:
+                print(f'-- 토픽 갯수 {i}개 모델의 HTML 저장을 건너뜁니다. ({type(e).__name__}: {e})')
 
     values_df = pd.DataFrame.from_dict(values_dict, orient='index', columns=['perplexity', 'coherence'])
     #          perplexity  coherence
@@ -211,7 +217,8 @@ def lda_explore_topic_number(setting: dict = None, tokenized_article_series: pd.
                                                         setting['iterations'],
                                                         setting['random_state'],
                                                         setting['result_dir'],
-                                                        setting['result_model_dir'])
+                                                        setting['result_model_dir'],
+                                                        setting.get('save_explore_html', True))
 
     # save_to_csv
     explore_csv_path = os.path.join(setting['result_dir'], 'lda__explore_topic_number.csv')
