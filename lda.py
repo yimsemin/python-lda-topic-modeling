@@ -170,10 +170,29 @@ def save_lda_html(lda_model, corpus, dictionary, save_result_to: str = 'test/out
     # "LDA 시각화 결과를 html파일로 저장
 
     recorder.ensure_parent_dir(save_result_to)
-    output = gensim_vis.prepare(lda_model, corpus, dictionary, doc_topic_dist=None, sort_topics=False, n_jobs=1)
-    # sort_topics=False의 경우 LDA 모델의 토픽 순서와 같음
-    # sort_topics=True의 경우 topic portion이 높은 순으로 정렬됨
-    pyLDAvis.save_html(output, save_result_to)
+    tmp_path = save_result_to + '.tmp'
+
+    def save_with_mds(mds):
+        output = gensim_vis.prepare(lda_model, corpus, dictionary, doc_topic_dist=None,
+                                    sort_topics=False, n_jobs=1, mds=mds)
+        # sort_topics=False의 경우 LDA 모델의 토픽 순서와 같음
+        # sort_topics=True의 경우 topic portion이 높은 순으로 정렬됨
+        try:
+            pyLDAvis.save_html(output, tmp_path)
+            os.replace(tmp_path, save_result_to)
+        except Exception:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            raise
+
+    try:
+        save_with_mds('pcoa')
+    except TypeError as e:
+        error_message = str(e)
+        if 'complex' not in error_message or 'JSON serializable' not in error_message:
+            raise
+        print('-- LDA 시각화 좌표에 complex 값이 생성되어 mmds 방식으로 다시 저장합니다.')
+        save_with_mds('mmds')
 
 
 def lda_modeling(setting=None, tokenized_article_series=None):

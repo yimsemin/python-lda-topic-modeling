@@ -178,7 +178,8 @@ def get_perplexity_and_coherence_value_list(tokenized_article_series, corpus, di
         values_dict[f'topic{i}'] = (get_perplexity(lda_model, corpus),
                                     get_coherence(lda_model, tokenized_article_series, dictionary))
 
-        if save_html and (new_model_created or not os.path.exists(html_path)):
+        html_missing_or_empty = not os.path.exists(html_path) or os.path.getsize(html_path) == 0
+        if save_html and (new_model_created or html_missing_or_empty):
             try:
                 lda.save_lda_html(lda_model, corpus, dictionary, html_path)
             except Exception as e:
