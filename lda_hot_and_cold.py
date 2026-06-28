@@ -1,5 +1,6 @@
 """ 시간과 토픽분포도의 회귀분석을 통해 토픽의 논의 추세를 파악함
 """
+import datetime
 import os
 
 import pandas as pd
@@ -22,9 +23,7 @@ def _setting():
 
         'sheet_name_seq': 0,                                # 시계열 정보가 담긴 시트 이름 / 0 입력 -> 가장 왼쪽에 있는 시트를 선택
         'column_name_seq': "date",                          # 시계열 정보가 담긴 열 제목 (첫번째 행)
-        'time_format': "%Y%m",
-        # 엑셀 날짜 서식 또는 날짜 문자열이면 위 date 형식으로 바꿔줌 / 필요 없다면 엑셀에서 '텍스트' 서식으로 입력할 것
-        # https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior
+        # 날짜는 엑셀 날짜 서식, serial date, YYYYMMDD, YYMMDD, YYYY-MM-DD, YYYY/MM/DD 형식을 지원
 
         # output
         'result_dir': 'test/output/'
@@ -38,21 +37,87 @@ def _setting():
     corpus, _ = lda.get_corpus_and_dictionary(tokenized_article_series, setting['result_dir'])
 
     time_series = pd.read_excel(setting['xlsx_name'], sheet_name=setting['sheet_name_seq'])[setting['column_name_seq']]
-    try:
-        time_series = time_series.dt.strftime(setting['time_format'])
-        print('-- time_format을 적용합니다.')
-    except AttributeError:
-        if pd.api.types.is_numeric_dtype(time_series):
-            print('-- datetime format이 아니므로, 입력된 값을 그대로 사용합니다.')
-        else:
-            parsed_time_series = pd.to_datetime(time_series, errors='coerce')
-            if parsed_time_series.notna().all():
-                time_series = parsed_time_series.dt.strftime(setting['time_format'])
-                print('-- time_format을 적용합니다.')
-            else:
-                print('-- datetime format이 아니므로, 입력된 값을 그대로 사용합니다.')
 
     return setting, lda_model, corpus, time_series
+
+
+def _get_date_series(time_series: pd.Series) -> pd.Series:
+    """ 입력된 시계열 값을 날짜로 복원한다. 복원 실패값은 NaT로 남긴다. """
+    type_count = {}
+    invalid_values = []
+
+    def parse_with_format(text, time_format, type_name):
+        try:
+            return pd.to_datetime(text, format=time_format, errors='raise').normalize(), type_name
+        except (TypeError, ValueError):
+            return pd.NaT, None
+
+    def parse_serial_date(number):
+        serial_date = int(float(number))
+        # 엑셀 serial date는 2173년 이후 6자리가 되므로, 그 이후 날짜를 쓰려면 이 조건을 확장해야 한다.
+        return pd.to_datetime(serial_date, unit='D', origin='1899-12-30').normalize()
+
+    def parse_one(value):
+        if value is None or pd.isna(value):
+            return pd.NaT, None
+
+        if isinstance(value, (pd.Timestamp, datetime.datetime, datetime.date)):
+            return pd.Timestamp(value).normalize(), '엑셀 날짜 서식'
+
+        text = str(value).strip()
+        if not text:
+            return pd.NaT, None
+
+        if text.replace('.', '', 1).isdigit():
+            number_text = text
+            if '.' in text:
+                number = float(text)
+                number_without_time = int(number)
+                number_text = str(number_without_time)
+                if number != number_without_time and len(number_text) == 5:
+                    return parse_serial_date(number), '엑셀 serial date(소수점 버림)'
+                if number != number_without_time:
+                    return pd.NaT, None
+
+            if number_text.isdigit():
+                if len(number_text) == 5:
+                    return parse_serial_date(number_text), '엑셀 serial date'
+                if len(number_text) == 8:
+                    return parse_with_format(number_text, '%Y%m%d', 'YYYYMMDD')
+                if len(number_text) == 6:
+                    parsed_date, type_name = parse_with_format(number_text, '%y%m%d', 'YYMMDD')
+                    if pd.notna(parsed_date):
+                        return parsed_date, type_name
+                    return parse_with_format(number_text, '%Y%m', 'YYYYMM')
+                return pd.NaT, None
+
+        for time_format, type_name in [('%Y-%m-%d', 'YYYY-MM-DD'), ('%Y/%m/%d', 'YYYY/MM/DD')]:
+            parsed_date, parsed_type_name = parse_with_format(text, time_format, type_name)
+            if pd.notna(parsed_date):
+                return parsed_date, parsed_type_name
+
+        return pd.NaT, None
+
+    parsed_dates = {}
+    for i, value in pd.Series(time_series).items():
+        parsed_date, type_name = parse_one(value)
+        parsed_dates[i] = parsed_date
+
+        if type_name is None:
+            invalid_values.append((i, value))
+        else:
+            type_count[type_name] = type_count.get(type_name, 0) + 1
+
+    if type_count:
+        print('-- 날짜 해석 결과: ' + ', '.join([f'{key} {value}건' for key, value in type_count.items()]))
+    else:
+        print('-- 날짜 해석 결과: 해석 성공 없음')
+    if invalid_values:
+        print(f'-- 날짜 해석 실패: {len(invalid_values)}건')
+        for i, value in invalid_values[:5]:
+            print(f'---- 행 {i}: {value}')
+
+    return pd.Series(parsed_dates, name=time_series.name)
 
 
 def get_theta_for_each_article_each_topic(lda_model, corpus) -> (pd.DataFrame, pd.Series):
@@ -158,15 +223,20 @@ def get_linear_regression_results(reg_model) -> pd.DataFrame:
 
 def check_hot_and_cold(time_and_theta_csv: str, column_name_seq: str = 'time'):
     # 토픽별 회귀분석
-    df = pd.read_csv(time_and_theta_csv)
-    time_series = pd.to_numeric(df[column_name_seq], errors='coerce')
-    if time_series.isna().any():
-        time_series = pd.to_datetime(df[column_name_seq], errors='coerce')
-        if time_series.isna().any():
-            raise ValueError(f'{column_name_seq} 열은 숫자 또는 날짜로 해석 가능해야 합니다.')
-        # 선형회귀에는 연속형 숫자가 필요하므로 날짜는 일 단위 숫자로 변환한다.
-        time_series = time_series.map(lambda x: x.toordinal())
-    df[column_name_seq] = time_series
+    df = pd.read_csv(time_and_theta_csv, dtype={column_name_seq: str})
+    date_series = _get_date_series(df[column_name_seq])
+    valid_date_count = date_series.notna().sum()
+    print(f'-- 회귀분석 사용 문서: {valid_date_count}건 / 제외: {len(df) - valid_date_count}건')
+    if valid_date_count < 2:
+        raise ValueError(f'{column_name_seq} 열에 분석 가능한 날짜가 2개 이상 필요합니다.')
+
+    df = df.loc[date_series.notna()].copy()
+    date_series = date_series.loc[date_series.notna()]
+    if date_series.nunique() < 2:
+        raise ValueError(f'{column_name_seq} 열에 서로 다른 날짜가 2개 이상 필요합니다.')
+
+    # 선형회귀에는 연속형 숫자가 필요하므로 첫 날짜로부터 며칠 지났는지로 변환한다.
+    df[column_name_seq] = (date_series - date_series.min()).dt.days
 
     reg_results = pd.DataFrame()
     topic = 0
