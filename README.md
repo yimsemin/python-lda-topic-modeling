@@ -9,7 +9,6 @@
    - `kiwipiepy` 기반 명사화 (커스텀 사전 추가 (예정))
    - `kiwipiepy` 기본 불용어 + 사용자 정의 불용어 제거
      (`test/input/stopwordlist.txt`에 `단어/품사` 형식으로 작성, 품사 생략 시 `NNG`로 처리)
-   - 1글자 단어 제거
    - 적게 등장한 단어 제거
 
 2. 빈도수 분석 `frequency_analysis.py`

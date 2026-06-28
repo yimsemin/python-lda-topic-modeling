@@ -100,22 +100,24 @@ def extract_noun_from_each_article(article_series: pd.Series, stopwords: Stopwor
 
 def remove_stop_words_from_each_article(tokenized_article_series: pd.Series,
                                         stopwordlist_location: str = 'test/input/stopwordlist.txt') -> pd.Series:
-    """ 각 열의 문서에 대해 불용어 사전 기준으로 불용어 제거
-    불용어 사전은 1줄에 1개씩 작성, 단어/품사 형식을 권장, #이 포함된 줄은 주석으로 처리함
+    """ 이미 명사로 추출된 문서 묶음에서 특정 키워드를 일괄 삭제하는 레거시 보조 함수
+
+    기본 전처리 파이프라인에서는 사용하지 않음.
+    제거할 키워드 사전은 1줄에 1개씩 작성, 단어/품사 형식을 쓰면 단어만 사용, #이 포함된 줄은 주석으로 처리함
 
     Args:
         tokenized_article_series(pd.Series): 각 줄은 토큰으로 구성된 리스트 예: [키워드, 키워드, 키워드 ... ]
-        stopwordlist_location(str): 불용어 사전(txt) 위치
+        stopwordlist_location(str): 제거할 키워드 사전(txt) 위치
 
     Returns:
-        (pd.Series) 한 줄에 불용어 제거된 문서 하나씩
+        (pd.Series) 한 줄에 특정 키워드가 제거된 문서 하나씩
     """
     tqdm.pandas()
 
-    # 불용어 사전 불러오기
+    # 함수 이름의 stop_words는 과거 호환을 위해 유지한다.
     try:
         with open(stopwordlist_location, 'r', encoding='utf-8') as f:
-            print('-- 저장된 불용어 사전을 불러옵니다.')
+            print('-- 저장된 제거할 키워드 사전을 불러옵니다.')
             txt_lines = f.read().splitlines()
 
         comments = [line for line in txt_lines if '#' in line]
@@ -123,32 +125,38 @@ def remove_stop_words_from_each_article(tokenized_article_series: pd.Series,
             print('---- 주석 없음')
         else:
             for i in comments:
-                print('---- '+str(i))       # 불용어 사전의 코멘트 출력
+                print('---- '+str(i))       # 제거할 키워드 사전의 코멘트 출력
 
-        stop_word_list = []
+        remove_word_list = []
         for raw_line in txt_lines:
             line = raw_line.strip()
             if not line or '#' in line:
                 continue
 
             if '/' in line:
-                stop_word_list.append(line.rsplit('/', 1)[0].strip())
+                remove_word_list.append(line.rsplit('/', 1)[0].strip())
             else:
-                stop_word_list.append(line)
+                remove_word_list.append(line)
 
     except FileNotFoundError:
-        print('-- 기본 불용어 사전을 사용합니다.')
-        stop_word_list = ['\n', '을', '를', '은', '가', '는', '이', '도', '수', '며', '고']      # 기본 불용어
+        print('-- 제거할 키워드 사전을 찾지 못했습니다. 키워드 제거를 건너뜁니다.')
+        return tokenized_article_series
 
-    print('-- 불용어 사전 예시 : '+', '.join(stop_word_list[0:4])+' ...')
+    if not remove_word_list:
+        print('-- 제거할 키워드가 없습니다. 키워드 제거를 건너뜁니다.')
+        return tokenized_article_series
 
-    stop_words_set = set(stop_word_list)
+    print('-- 제거할 키워드 사전 예시 : '+', '.join(remove_word_list[0:4])+' ...')
 
-    return tokenized_article_series.progress_map(lambda x: [word for word in x if word not in stop_words_set])
+    remove_words_set = set(remove_word_list)
+
+    return tokenized_article_series.progress_map(lambda x: [word for word in x if word not in remove_words_set])
 
 
 def remove_one_character_from_each_article(tokenized_article_series) -> pd.Series:
-    """ 각 열의 문서에 대해 한 글자인 단어 제거
+    """ 각 열의 문서에 대해 한 글자인 단어를 제거하는 레거시 보조 함수
+
+    kiwipiepy 기반 기본 전처리 파이프라인에서는 사용하지 않음.
 
     Args:
         tokenized_article_series(pd.Series): 각 줄은 토큰으로 구성된 리스트 (예: [키워드, 키워드, 키워드 ... ])
@@ -198,7 +206,7 @@ def remove_low_count_word(tokenized_article_series, min_word_count: int = 50) ->
 def preprocessing_noun(setting: dict = None, article_series: pd.Series = None):
     """ pd.Series 데이터를 전처리하여 xlsx 파일에 저장
 
-    수행하는 전처리: 명사 추출 -> 불용어 제거 -> 한글자 제거 -> 적게 등장한 글자 제거
+    수행하는 전처리: 명사 추출 및 불용어 제거 -> 적게 등장한 단어 제거
 
     Args:
         setting: 설정값 불러오기
@@ -217,9 +225,7 @@ def preprocessing_noun(setting: dict = None, article_series: pd.Series = None):
     # preprocess - Noun
     print('1단계: 명사를 추출하고 불용어를 제거합니다.')
     tokenized_article_series = extract_noun_from_each_article(article_series, stopwords)
-    print('2단계: 한글자 단어를 제거합니다.')
-    tokenized_article_series = remove_one_character_from_each_article(tokenized_article_series)
-    print('3단계: 적게 등장한 단어를 제거합니다.')
+    print('2단계: 적게 등장한 단어를 제거합니다.')
     tokenized_article_series = remove_low_count_word(tokenized_article_series, setting['min_word_count'])
     # 0      [키워드, 키워드, 키워드 ...
     # 1      [키워드, 키워드, 키워드 ...
