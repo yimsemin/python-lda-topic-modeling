@@ -6,27 +6,27 @@
 
 ## 1. 실행환경
 
+### Windows 초기 설정
+
+GitHub ZIP을 다운로드해 압축을 푼 뒤 `initial_setting.bat`을 실행하면 프로젝트 폴더 안에 실행환경을 만듭니다.
+
+```bat
+initial_setting.bat
+```
+
+이 스크립트는 Windows 기본 도구인 `curl.exe`와 `tar.exe`로 `uv`를 `.runtime/uv`에 내려받고, `.python-version`의 Python 버전으로 프로젝트 내부 Python과 `.venv`를 만든 뒤, `requirements.txt`의 패키지를 설치합니다. 관리자 권한, 전역 PATH 변경, 시스템 Python 설치를 요구하지 않습니다.
+
+재설치가 필요할 경우 `.venv` 및 `.runtime` 폴더를 삭제한 뒤 다시 실행합니다.
+
+### 수동 설정
+
+필요 Python 버전은 `.python-version`을 참고해주세요.
+
 ```bash
-python3.13 -m venv .venv
+python -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-```
-
-실행은 저장소의 가상환경을 기준으로 합니다.
-
-```bash
-.venv/bin/python run_analysis.py
-```
-
-개별 단계만 직접 실행하려면 아래 파일을 사용할 수 있습니다.
-
-```bash
-.venv/bin/python preprocessing.py
-.venv/bin/python frequency_analysis.py
-.venv/bin/python lda_explore_topic_number.py
-.venv/bin/python lda.py
-.venv/bin/python lda_hot_and_cold.py
 ```
 
 주요 패키지 버전은 [requirements.txt](requirements.txt)를 참조합니다. 워드클라우드 한글 렌더링을 위해 `font/NanumGothic.ttf`를 포함하며, 라이선스 전문은 `font/OFL.txt`를 참조합니다.
@@ -54,6 +54,22 @@ python -m pip install -r requirements.txt
 | `5` | 선택한 LDA 모델로 Hot/Cold 시계열 분석 |
 
 예를 들어 전처리만 실행하려면 `tasks`를 `[1]`로 두고, 전처리 후 토픽 수 탐색까지 이어서 실행하려면 `[1, 2, 3]`처럼 둡니다.
+
+실행은 저장소의 가상환경을 기준으로 합니다.
+
+```bash
+.venv/bin/python run_analysis.py
+```
+
+개별 단계만 직접 실행하려면 아래 파일을 사용할 수 있습니다.
+
+```bash
+.venv/bin/python preprocessing.py
+.venv/bin/python frequency_analysis.py
+.venv/bin/python lda_explore_topic_number.py
+.venv/bin/python lda.py
+.venv/bin/python lda_hot_and_cold.py
+```
 
 ## 4. 권장 사용자 워크플로우
 
@@ -109,7 +125,7 @@ python -m pip install -r requirements.txt
 
 | 파일 | 역할 | 주요 산출물 |
 | --- | --- | --- |
-| `run_analysis.py` | 실전 입력/출력 경로를 쓰는 통합 실행 파일 | 선택한 task 번호에 따라 아래 산출물 생성 |
+| `run_analysis.py` | 통합 실행 파일 | 선택한 task 번호에 따라 아래 산출물 생성 |
 | `preprocessing.py` | 명사 추출, 불용어 제거, 저빈도 단어 제거 | 엑셀 `preprocessed` 시트, `preprocessing_empty_documents.csv` |
 | `frequency_analysis.py` | 전처리 결과의 단어 빈도 확인 | `frequency_analysis.csv`, `word_cloud.png` |
 | `lda_explore_topic_number.py` | 토픽 수 후보별 모델 생성과 지표 계산 | `lda__explore_topic_number.csv`, 지표 그래프, k별 HTML/CSV |
@@ -118,10 +134,10 @@ python -m pip install -r requirements.txt
 
 ## 6. 캐시와 재실행 주의사항
 
-`dictionary`, `corpus`, `model/` 파일은 실행 시간을 줄이기 위해 재사용됩니다. 같은 입력과 같은 설정을 반복 실행할 때는 유용하지만, 입력 엑셀이나 전처리 기준이 바뀐 뒤에도 남아 있으면 예전 데이터 기준 결과가 섞일 수 있습니다.
+`dictionary`, `corpus`, `model/` 파일은 실행 시간을 줄이기 위해 재사용됩니다. 같은 입력과 같은 설정을 반복 실행할 때는 유용하지만, 입력 엑셀이나 전처리 기준이 바뀐 뒤에는 새로 생성해야 합니다.
 
-새 입력으로 다시 분석할 때 권장 순서는 다음 중 하나입니다.
+새 입력으로 다시 분석할 경우 다음 선택지 중 하나를 선택해서 진행해주세요.
 
-1. 기존 결과 폴더를 비우고 다시 실행합니다.
+1. (추천) 기존 결과 폴더를 비우고 다시 실행합니다.
 2. 새 `result_dir`, `result_model_dir`를 지정합니다.
 3. `reuse_saved_corpus=False`, `reuse_saved_model=False`로 설정해 새로 생성합니다.
