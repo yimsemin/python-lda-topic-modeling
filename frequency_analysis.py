@@ -1,9 +1,9 @@
 """ 각 행에 전처리된 문서가 기록된 엑셀파일에서, 전체 문서에 대해 단어 빈도분석 실시 -> 결과를 csv로 저장
 """
 import os
-import tempfile
 
-os.environ.setdefault('MPLCONFIGDIR', os.path.join(tempfile.gettempdir(), 'matplotlib'))
+os.environ.setdefault('MPLCONFIGDIR', os.path.join('.runtime', 'matplotlib'))
+os.makedirs(os.environ['MPLCONFIGDIR'], exist_ok=True)
 
 import pandas as pd
 from wordcloud import WordCloud

@@ -14,6 +14,7 @@ cd /d "%~dp0" || goto :fail
 set "PROJECT_ROOT=%CD%"
 set "RUNTIME_DIR=%PROJECT_ROOT%\.runtime"
 set "RUNTIME_TEMP_DIR=%RUNTIME_DIR%\temp"
+set "MATPLOTLIB_CONFIG_DIR=%RUNTIME_DIR%\matplotlib"
 set "UV_DIR=%RUNTIME_DIR%\uv"
 set "UV_EXE=%UV_DIR%\uv.exe"
 set "UV_DOWNLOAD_DIR=%RUNTIME_DIR%\download"
@@ -76,6 +77,7 @@ exit /b 0
 :prepare_dirs
 call :ensure_dir "%RUNTIME_DIR%" || exit /b 1
 call :ensure_dir "%RUNTIME_TEMP_DIR%" || exit /b 1
+call :ensure_dir "%MATPLOTLIB_CONFIG_DIR%" || exit /b 1
 call :ensure_dir "%UV_CACHE_DIR%" || exit /b 1
 call :ensure_dir "%UV_PYTHON_INSTALL_DIR%" || exit /b 1
 exit /b 0

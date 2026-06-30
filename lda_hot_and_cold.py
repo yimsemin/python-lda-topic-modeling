@@ -2,9 +2,9 @@
 """
 import datetime
 import os
-import tempfile
 
-os.environ.setdefault('MPLCONFIGDIR', os.path.join(tempfile.gettempdir(), 'matplotlib'))
+os.environ.setdefault('MPLCONFIGDIR', os.path.join('.runtime', 'matplotlib'))
+os.makedirs(os.environ['MPLCONFIGDIR'], exist_ok=True)
 os.environ.setdefault('MPLBACKEND', 'Agg')
 
 import matplotlib.pyplot as plt

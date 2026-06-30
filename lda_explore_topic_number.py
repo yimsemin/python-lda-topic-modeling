@@ -1,9 +1,9 @@
 """ 최적의 토픽 갯수 k를 찾기 위해 LDA 모델들의 혼란도(perplexity)와 응집도(coherence)를 조사함
 """
 import os
-import tempfile
 
-os.environ.setdefault('MPLCONFIGDIR', os.path.join(tempfile.gettempdir(), 'matplotlib'))
+os.environ.setdefault('MPLCONFIGDIR', os.path.join('.runtime', 'matplotlib'))
+os.makedirs(os.environ['MPLCONFIGDIR'], exist_ok=True)
 os.environ.setdefault('MPLBACKEND', 'Agg')
 
 import pandas as pd
