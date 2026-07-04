@@ -20,7 +20,7 @@ def _setting():
         'result_csv_name': 'test/output/frequency_analysis.csv',
         'result_word_cloud_name': 'test/output/word_cloud.png',
         'word_cloud_font': 'font/NanumGothic.ttf',
-        'min_word_count': 50
+        'min_word_count': 10
     }
 
     excel_data = pd.read_excel(setting['xlsx_name'], sheet_name=setting['sheet_name'])[setting['column_name']]
@@ -55,7 +55,7 @@ def _get_available_word_cloud_font(my_font: str = 'font/NanumGothic.ttf'):
     return None
 
 
-def count_frequency(tokenized_article_series: pd.Series, min_word_count: int = 50) -> pd.Series:
+def count_frequency(tokenized_article_series: pd.Series, min_word_count: int = 10) -> pd.Series:
     """ 단어(토큰)와 빈도수를 내림차순으로 반환
 
     Args:

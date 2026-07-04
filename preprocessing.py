@@ -18,7 +18,7 @@ def _setting():
         'stopwordlist_location': 'test/input/stopwordlist.txt',
         'result_sheet_name': 'preprocessed',
         'empty_document_csv_name': 'test/output/preprocessing_empty_documents.csv',
-        'min_word_count': 50
+        'min_word_count': 10
     }
 
     article_series = pd.read_excel(setting['xlsx_name'], sheet_name=setting['sheet_name'])[setting['column_name']]
@@ -162,7 +162,7 @@ def remove_one_character_from_each_article(tokenized_article_series) -> pd.Serie
     return tokenized_article_series.progress_map(lambda line: [word for word in line if len(word) > 1])
 
 
-def remove_low_count_word(tokenized_article_series, min_word_count: int = 50) -> pd.Series:
+def remove_low_count_word(tokenized_article_series, min_word_count: int = 10) -> pd.Series:
     """ 각 열의 문서에 대해 적게 등장한 단어 제거
 
     Args:

@@ -39,9 +39,9 @@ def _setting():
         "word_cloud_name": "output/word_cloud.png",
         "word_cloud_font": "font/NanumGothic.ttf",
         # preprocessing setting
-        "preprocessing_min_word_count": 20,  # n회 이하 나타난 단어는 전처리 결과에서 제거
+        "preprocessing_min_word_count": 10,  # n회 이하 나타난 단어는 전처리 결과에서 제거
         # frequency setting
-        "frequency_min_word_count": 20,  # n회 이하 나타난 단어는 빈도분석 결과에서 제외
+        "frequency_min_word_count": 10,  # n회 이하 나타난 단어는 빈도분석 결과에서 제외
         # topic number explore setting
         "topic_number_start": 2,  # 탐색할 최소 토픽 값
         "topic_number_end": 40,  # 탐색할 최대 토픽 값

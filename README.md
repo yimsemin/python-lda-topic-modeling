@@ -141,3 +141,9 @@ python -m pip install -r requirements.txt
 1. (추천) 기존 결과 폴더를 비우고 다시 실행합니다.
 2. 새 `result_dir`, `result_model_dir`를 지정합니다.
 3. `reuse_saved_corpus=False`, `reuse_saved_model=False`로 설정해 새로 생성합니다.
+
+## 7. 테스트 데이터
+
+샘플로 제공되는 테스트 데이터(`test/input/data.xlsx`)는 AI로 생성한 가상의 B2B SaaS 기업 재직자 1:1 반구조화 면담 응답 140건입니다. 면담 내용은 조직개편, 성과평가, 핵심 인력 이탈 시나리오를 중심으로 구성했으며, 원본 생성 지침과 토픽 사전은 [doc/TEST_DATA_GENERATION_SCENARIO.md](doc/TEST_DATA_GENERATION_SCENARIO.md), 데이터 기술통계는 [doc/TEST_DATA_DESCRIPTIVE_STATISTICS.md](doc/TEST_DATA_DESCRIPTIVE_STATISTICS.md)를 참조합니다.
+
+데이터는 생성은 ChatGPT를 통해 2026년 6월 30일에 수행했으며, 한 번에 일괄 생성하지 않고 단계적으로 진행했습니다. 첫째, 시나리오와 토픽 사전을 기준으로 면담일, 부서, 직급, 근속연수, 주 토픽, 보조 토픽, 본문을 가진 응답 초안을 만들었습니다. 둘째, 초안별로 월별 사건과의 정합성, 부서·직급별 관점, 토픽 중심성, 문체 자연성, 응답 간 반복성을 검토했습니다. 셋째, 검토 결과를 바탕으로 긍정·중립·부정 경험, 간접 관찰, 모호한 감정, 덜 정돈된 발화, 회의·메신저·고객 통화·평가 면담 같은 구체적 업무 장면을 보강했습니다. 넷째, 누적된 데이터셋 전체에서 중복·근접 중복, 날짜와 사건 월의 충돌, 메타데이터와 본문의 불일치, 날짜 형식과 토픽 구분자 혼재를 점검했습니다.
