@@ -1,15 +1,19 @@
-/__pycache__
+__pycache__/
+/.venv
+/venv
+/.runtime/
 
-/input
-/result
-/test
-/test2
-/custom_okt/my_nouns.txt
-/custom_okt/my_typos.txt
-/custom_okt/open-korean-text*
-/stopwords/stopwordlist.txt
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
 
-my_scratch.py
-memo.md
+/input/*
+!/input/stopwordlist.example.txt
+
+/output/
+
+/test/output/
+
+*.log
 test_*.py
-task_*.py
