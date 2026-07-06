@@ -174,7 +174,8 @@ def save_lda_html(lda_model, corpus, dictionary, save_result_to: str = 'test/out
         # sort_topics=False의 경우 LDA 모델의 토픽 순서와 같음
         # sort_topics=True의 경우 topic portion이 높은 순으로 정렬됨
         try:
-            pyLDAvis.save_html(output, tmp_path)
+            with open(tmp_path, 'w', encoding='utf-8') as file:
+                pyLDAvis.save_html(output, file)
             os.replace(tmp_path, save_result_to)
         except Exception:
             if os.path.exists(tmp_path):
