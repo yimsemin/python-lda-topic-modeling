@@ -1,35 +1,60 @@
 # python-lda-topic-modeling
 
 한국어 토픽모델링(Topic Modeling)을 위한 python 코드입니다. 모델링에는 [Gensim](https://github.com/RaRe-Technologies/gensim)을, 한국어 텍스트 처리에는 [kiwipiepy](https://github.com/bab2min/kiwipiepy)를 사용합니다.
+또한 워드클라우드 한글 렌더링을 위해 `font/NanumGothic.ttf`를 포함하며, 라이선스 전문은 `font/OFL.txt`를 참조합니다.
 
-실제 분석은 `run_analysis.py`의 `_setting()`만 수정해 실행하는 방식을 권장합니다.
+`run_analysis.py`의 `_setting()`만 수정하여 실행할 수 있습니다.
 
 ## 1. 실행환경
 
 ### Windows 초기 설정
 
-GitHub ZIP을 다운로드해 압축을 푼 뒤 `initial_setting.bat`을 실행하면 프로젝트 폴더 안에 실행환경을 만듭니다.
-
-```bat
-initial_setting.bat
-```
+GitHub ZIP을 다운로드해 압축을 푼 뒤 `initial_setting.bat`을 실행하여 실행환경을 만들 수 있습니다.
 
 이 스크립트는 Windows 기본 도구인 `curl.exe`와 `tar.exe`로 `uv`를 `.runtime/uv`에 내려받고, `.python-version`의 Python 버전으로 프로젝트 내부 Python과 `.venv`를 만든 뒤, `requirements.txt`의 패키지를 설치합니다. 관리자 권한, 전역 PATH 변경, 시스템 Python 설치를 요구하지 않습니다.
 
 재설치가 필요할 경우 `.venv` 및 `.runtime` 폴더를 삭제한 뒤 다시 실행합니다.
 
-### 수동 설정
+### macOS 수동 설정
 
-필요 Python 버전은 `.python-version`을 참고해주세요.
+GitHub ZIP을 다운로드해 압축을 푼 뒤 해당 폴더로 이동합니다.
+
+```bash
+cd ~/Downloads/python-lda-topic-modeling
+```
+
+가상환경을 설정합니다. 필요한 Python 버전은 `.python-version`에서 확인합니다.
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+mkdir -p input output
 ```
 
-주요 패키지 버전은 [requirements.txt](requirements.txt)를 참조합니다. 워드클라우드 한글 렌더링을 위해 `font/NanumGothic.ttf`를 포함하며, 라이선스 전문은 `font/OFL.txt`를 참조합니다.
+### 가상환경 내 코드 실행
+
+Windows PowerShell:
+
+```powershell
+.venv\Scripts\Activate.ps1
+python run_analysis.py
+```
+
+Windows 명령 프롬프트(cmd):
+
+```bat
+.venv\Scripts\activate.bat
+python run_analysis.py
+```
+
+macOS 터미널(terminal):
+
+```bash
+source .venv/bin/activate
+python run_analysis.py
+```
 
 ## 2. 입력 파일 준비
 
@@ -43,6 +68,8 @@ python -m pip install -r requirements.txt
 
 `run_analysis.py`의 `_setting()`에서 입력, 출력, 전처리, 토픽 수 탐색, 최종 모델, 캐시 설정을 한 번에 관리합니다.
 
+터미널에서는 보통 `run_analysis.py`를 실행합니다. `_setting()`에는 실행에 필요한 설정값이 모여 있고, `tasks`에 적힌 번호에 따라 `preprocessing.py`, `frequency_analysis.py`, `lda_explore_topic_number.py`, `lda.py`, `lda_hot_and_cold.py`의 기능이 차례대로 실행됩니다.
+
 `tasks`에는 실행할 작업 번호를 순서대로 넣습니다.
 
 | 번호 | 실행 작업 |
@@ -55,20 +82,24 @@ python -m pip install -r requirements.txt
 
 예를 들어 전처리만 실행하려면 `tasks`를 `[1]`로 두고, 전처리 후 토픽 수 탐색까지 이어서 실행하려면 `[1, 2, 3]`처럼 둡니다.
 
-실행은 저장소의 가상환경을 기준으로 합니다.
+자주 수정하는 설정값은 아래와 같습니다.
+
+| 설정값 | 의미 |
+| --- | --- |
+| `tasks` | 실행할 작업 번호 목록입니다. 처음에는 `[1]`로 전처리만 확인하는 것을 권장합니다. |
+| `xlsx_name` | 분석할 엑셀 파일 경로입니다. 기본값은 `input/data.xlsx`입니다. |
+| `raw_sheet_name` | 원문이 들어 있는 시트입니다. `0`이면 가장 왼쪽 시트를 사용합니다. |
+| `text_column_name` | 분석할 본문 열 이름입니다. 기본값은 `article`입니다. |
+| `stopwordlist_location` | 사용자 불용어 파일 경로입니다. 기본값은 `input/stopwordlist.txt`입니다. |
+| `preprocessing_min_word_count` | 너무 적게 등장한 단어를 제거하는 기준입니다. |
+| `topic_number_start`, `topic_number_end` | 토픽 수 후보를 탐색할 범위입니다. |
+| `num_topics` | 최종 모델을 만들 때 사용할 토픽 수입니다. |
+| `reuse_saved_corpus`, `reuse_saved_model` | 이전 실행 결과를 재사용할지 정합니다. 입력이나 전처리 기준을 바꿨다면 `False`로 두거나 기존 결과 폴더를 비웁니다. |
+
+가상환경을 활성화했다면 아래처럼 실행합니다.
 
 ```bash
-.venv/bin/python run_analysis.py
-```
-
-개별 단계만 직접 실행하려면 아래 파일을 사용할 수 있습니다.
-
-```bash
-.venv/bin/python preprocessing.py
-.venv/bin/python frequency_analysis.py
-.venv/bin/python lda_explore_topic_number.py
-.venv/bin/python lda.py
-.venv/bin/python lda_hot_and_cold.py
+python run_analysis.py
 ```
 
 ## 4. 권장 사용자 워크플로우
