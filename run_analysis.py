@@ -22,6 +22,7 @@ def _setting():
         # 3: topic_number_start~end 범위의 토픽 갯수 탐색 실행(lda_explore_topic_number.py)
         # 4: num_topics로 선택한 토픽수의 LDA 모델을 task_repeat만큼 생성(lda.py)
         # 5: 선택한 LDA 모델로 Hot/Cold 시계열 분석 실행(lda_hot_and_cold.py)
+        # 예: [1] 전처리만 실행 / [1, 2, 3] 전처리부터 토픽 수 탐색까지 순서대로 실행
         "tasks": [1],
         # input
         "xlsx_name": "input/data.xlsx",  # 엑셀 파일은 한 행에 문서 하나가 들어가는 형식이어야 함
@@ -66,11 +67,25 @@ def _setting():
     }
 
 
-def _preprocessing_setting(setting):
+def _raw_text_setting(setting):
     return {
         "xlsx_name": setting["xlsx_name"],
         "sheet_name": setting["raw_sheet_name"],
         "column_name": setting["text_column_name"],
+    }
+
+
+def _preprocessed_text_setting(setting):
+    return {
+        "xlsx_name": setting["xlsx_name"],
+        "sheet_name": setting["preprocessed_sheet_name"],
+        "column_name": setting["text_column_name"],
+    }
+
+
+def _preprocessing_setting(setting):
+    return {
+        **_raw_text_setting(setting),
         "stopwordlist_location": setting["stopwordlist_location"],
         "result_sheet_name": setting["preprocessed_sheet_name"],
         "empty_document_csv_name": setting["empty_document_csv_name"],
@@ -80,9 +95,7 @@ def _preprocessing_setting(setting):
 
 def _frequency_setting(setting):
     return {
-        "xlsx_name": setting["xlsx_name"],
-        "sheet_name": setting["preprocessed_sheet_name"],
-        "column_name": setting["text_column_name"],
+        **_preprocessed_text_setting(setting),
         "result_csv_name": setting["frequency_csv_name"],
         "result_word_cloud_name": setting["word_cloud_name"],
         "word_cloud_font": setting["word_cloud_font"],
@@ -92,9 +105,7 @@ def _frequency_setting(setting):
 
 def _explore_setting(setting):
     task_setting = {
-        "xlsx_name": setting["xlsx_name"],
-        "sheet_name": setting["preprocessed_sheet_name"],
-        "column_name": setting["text_column_name"],
+        **_preprocessed_text_setting(setting),
         "result_dir": setting["result_dir"],
         "result_model_dir": setting["result_model_dir"],
         "save_explore_html": setting["save_explore_html"],
@@ -116,9 +127,7 @@ def _explore_setting(setting):
 
 def _lda_setting(setting):
     return {
-        "xlsx_name": setting["xlsx_name"],
-        "sheet_name": setting["preprocessed_sheet_name"],
-        "column_name": setting["text_column_name"],
+        **_preprocessed_text_setting(setting),
         "result_dir": setting["result_dir"],
         "result_model_dir": setting["result_model_dir"],
         "reuse_saved_corpus": setting["reuse_saved_corpus"],
@@ -140,10 +149,8 @@ def _get_lda_model_path(setting):
 
 def _hot_and_cold_setting(setting):
     return {
+        **_preprocessed_text_setting(setting),
         "lda_model": _get_lda_model_path(setting),
-        "xlsx_name": setting["xlsx_name"],
-        "sheet_name": setting["preprocessed_sheet_name"],
-        "column_name": setting["text_column_name"],
         "sheet_name_seq": setting["time_sheet_name"],
         "column_name_seq": setting["time_column_name"],
         "result_dir": setting["result_dir"],
@@ -151,11 +158,25 @@ def _hot_and_cold_setting(setting):
     }
 
 
-def _validate_tasks(tasks, task_names):
+_TASKS = {
+    1: ("전처리", preprocessing.preprocessing_noun, _preprocessing_setting),
+    2: ("빈도분석", frequency.frequency_analysis, _frequency_setting),
+    3: ("토픽 갯수 탐색", explore_topic.lda_explore_topic_number, _explore_setting),
+    4: ("선택 토픽수 LDA 모델링", lda.lda_modeling, _lda_setting),
+    5: ("Hot/Cold 시계열 분석", hot_and_cold.lda_hot_and_cold, _hot_and_cold_setting),
+}
+
+
+def _validate_tasks(tasks):
     if isinstance(tasks, int):
         tasks = [tasks]
+    else:
+        try:
+            tasks = list(tasks)
+        except TypeError:
+            raise ValueError("tasks는 task 번호 또는 task 번호 목록이어야 합니다.") from None
 
-    unknown_tasks = [task for task in tasks if task not in task_names]
+    unknown_tasks = [task for task in tasks if task not in _TASKS]
     if unknown_tasks:
         raise ValueError(f"알 수 없는 task 번호입니다: {unknown_tasks}")
 
@@ -166,38 +187,23 @@ def run_analysis(setting: dict = None):
     if setting is None:
         setting = _setting()
 
-    task_names = {
-        1: "전처리",
-        2: "빈도분석",
-        3: "토픽 갯수 탐색",
-        4: "선택 토픽수 LDA 모델링",
-        5: "Hot/Cold 시계열 분석",
-    }
-    tasks = _validate_tasks(setting["tasks"], task_names)
+    tasks = _validate_tasks(setting["tasks"])
+    task_count = len(tasks)
 
-    task_labels = [f"{task}:{task_names[task]}" for task in tasks]
-    print(f"-- 전체 작업: {len(tasks)}개 ({', '.join(task_labels)})", flush=True)
+    task_labels = [f"{task}:{_TASKS[task][0]}" for task in tasks]
+    print(f"-- 전체 작업: {task_count}개 ({', '.join(task_labels)})", flush=True)
 
-    with recorder.WithTimeRecorder(f"전체 분석 ({len(tasks)}개 작업)"):
+    with recorder.WithTimeRecorder(f"전체 분석 ({task_count}개 작업)"):
         for task_index, task in enumerate(tasks, start=1):
-            task_name = task_names[task]
+            task_name, task_runner, setting_builder = _TASKS[task]
             print(
-                f"\n-- 작업 진행: {task_index}/{len(tasks)} 시작 - {task_name}",
+                f"\n-- 작업 진행: {task_index}/{task_count} 시작 - {task_name}",
                 flush=True,
             )
-            with recorder.WithTimeRecorder(f"{task_index}/{len(tasks)} {task_name}"):
-                if task == 1:
-                    preprocessing.preprocessing_noun(_preprocessing_setting(setting))
-                elif task == 2:
-                    frequency.frequency_analysis(_frequency_setting(setting))
-                elif task == 3:
-                    explore_topic.lda_explore_topic_number(_explore_setting(setting))
-                elif task == 4:
-                    lda.lda_modeling(_lda_setting(setting))
-                elif task == 5:
-                    hot_and_cold.lda_hot_and_cold(_hot_and_cold_setting(setting))
+            with recorder.WithTimeRecorder(f"{task_index}/{task_count} {task_name}"):
+                task_runner(setting_builder(setting))
             print(
-                f"-- 작업 진행: {task_index}/{len(tasks)} 완료 - {task_name}",
+                f"-- 작업 진행: {task_index}/{task_count} 완료 - {task_name}",
                 flush=True,
             )
 
