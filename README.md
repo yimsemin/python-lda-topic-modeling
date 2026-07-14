@@ -1,6 +1,6 @@
 # python-lda-topic-modeling
 
-한국어 토픽모델링(Topic Modeling)을 위한 python 코드입니다. 모델링에는 [Gensim](https://github.com/RaRe-Technologies/gensim)을, 한국어 텍스트 처리에는 [kiwipiepy](https://github.com/bab2min/kiwipiepy)를 사용합니다.
+한국어 토픽모델링(Topic Modeling)을 위한 Python 코드입니다. 모델링에는 [Gensim](https://github.com/RaRe-Technologies/gensim)을, 한국어 텍스트 처리에는 [kiwipiepy](https://github.com/bab2min/kiwipiepy)를 사용합니다.
 또한 워드클라우드 한글 렌더링을 위해 `font/NanumGothic.ttf`를 포함하며, 라이선스 전문은 `font/OFL.txt`를 참조합니다.
 
 `run_analysis.py`의 `_setting()`만 수정하여 실행할 수 있습니다.
@@ -63,6 +63,7 @@ python run_analysis.py
 - 시계열 분석을 할 경우 원문 시트에 날짜 열도 준비합니다. 기본 열 이름은 `date`입니다.
 - 날짜는 엑셀 날짜 서식, serial date, `YYYYMMDD`, `YYMMDD`, `YYYY-MM-DD`, `YYYY/MM/DD` 형식을 지원합니다.
 - 사용자 정의 불용어는 `input/stopwordlist.example.txt`를 참고해 `input/stopwordlist.txt`에 작성합니다. 한 줄에 `단어/품사` 형식으로 쓰며, 품사를 생략하면 `NNG`로 처리합니다.
+- `input/`과 `output/`의 사용자 파일은 Git에 포함되지 않습니다. 다른 PC로 이동하거나 프로젝트를 다시 설치하기 전에 직접 백업합니다.
 
 ## 3. run_analysis.py 실행
 
@@ -76,7 +77,7 @@ python run_analysis.py
 | --- | --- |
 | `1` | 전처리 |
 | `2` | 빈도분석 |
-| `3` | 토픽 갯수 탐색 |
+| `3` | 토픽 개수 탐색 |
 | `4` | 선택한 토픽 수로 LDA 모델 반복 생성 |
 | `5` | 선택한 LDA 모델로 Hot/Cold 시계열 분석 |
 
@@ -114,14 +115,13 @@ python run_analysis.py
 
 3. 빈 문서를 검토하고 입력을 조정합니다.
    - 빈 문서가 생기면 원문 엑셀에서 해당 행을 삭제하거나 원문을 보완합니다.
-   - 너무 많은 단어가 제거된 경우 `min_word_count`를 낮춥니다. 이 값은 `n회 이하 등장한 단어를 제거`하는 기준입니다.
+   - 너무 많은 단어가 제거된 경우 `preprocessing_min_word_count`를 낮춥니다. 이 값은 `n회 이하 등장한 단어를 제거`하는 기준입니다.
    - 불필요한 단어가 남는 경우 사용자 정의 불용어를 추가합니다.
    - 빈 문서가 없어질 때까지 전처리를 반복합니다.
 
 4. 이전 산출물이 새 입력과 섞이지 않도록 정리합니다.
-   - 입력 엑셀이나 전처리 기준을 바꾼 뒤 LDA를 다시 돌릴 때는 기존 `result_dir`와 `result_model_dir` 결과를 삭제하거나 새 결과 폴더를 사용합니다.
-   - 삭제 대신 설정으로 새로 만들려면 `reuse_saved_corpus=False`로 둡니다.
-   - 입력이 바뀐 재분석에서는 `reuse_saved_model=False`도 함께 둡니다.
+   - 입력 엑셀이나 전처리 기준을 바꾼 뒤 LDA를 다시 돌릴 때는 새 `result_dir`와 `result_model_dir`를 사용하거나, 필요한 결과를 백업한 뒤 기존 결과 폴더를 비웁니다.
+   - 같은 결과 폴더에서 새로 만들려면 `reuse_saved_corpus=False`로 둡니다. 이 경우 기존 모델도 재사용하지 않습니다.
 
 5. 필요하면 빈도분석으로 전처리 결과를 점검합니다.
    - `tasks`: `[2]`
@@ -169,12 +169,12 @@ python run_analysis.py
 
 새 입력으로 다시 분석할 경우 다음 선택지 중 하나를 선택해서 진행해주세요.
 
-1. (추천) 기존 결과 폴더를 비우고 다시 실행합니다.
-2. 새 `result_dir`, `result_model_dir`를 지정합니다.
-3. `reuse_saved_corpus=False`, `reuse_saved_model=False`로 설정해 새로 생성합니다.
+1. (추천) 새 `result_dir`, `result_model_dir`를 지정해 기존 결과와 분리합니다.
+2. 필요한 결과를 백업한 뒤 기존 결과 폴더를 비우고 다시 실행합니다.
+3. 같은 폴더를 계속 사용한다면 `reuse_saved_corpus=False`로 설정합니다. 같은 이름의 산출물은 덮어쓸 수 있습니다.
 
 ## 7. 테스트 데이터
 
 샘플로 제공되는 테스트 데이터(`test/input/data.xlsx`)는 AI로 생성한 가상의 B2B SaaS 기업 재직자 1:1 반구조화 면담 응답 140건입니다. 면담 내용은 조직개편, 성과평가, 핵심 인력 이탈 시나리오를 중심으로 구성했으며, 원본 생성 지침과 토픽 사전은 [doc/TEST_DATA_GENERATION_SCENARIO.md](doc/TEST_DATA_GENERATION_SCENARIO.md), 데이터 기술통계는 [doc/TEST_DATA_DESCRIPTIVE_STATISTICS.md](doc/TEST_DATA_DESCRIPTIVE_STATISTICS.md)를 참조합니다.
 
-데이터는 생성은 ChatGPT를 통해 2026년 6월 30일에 수행했으며, 한 번에 일괄 생성하지 않고 단계적으로 진행했습니다. 첫째, 시나리오와 토픽 사전을 기준으로 면담일, 부서, 직급, 근속연수, 주 토픽, 보조 토픽, 본문을 가진 응답 초안을 만들었습니다. 둘째, 초안별로 월별 사건과의 정합성, 부서·직급별 관점, 토픽 중심성, 문체 자연성, 응답 간 반복성을 검토했습니다. 셋째, 검토 결과를 바탕으로 긍정·중립·부정 경험, 간접 관찰, 모호한 감정, 덜 정돈된 발화, 회의·메신저·고객 통화·평가 면담 같은 구체적 업무 장면을 보강했습니다. 넷째, 누적된 데이터셋 전체에서 중복·근접 중복, 날짜와 사건 월의 충돌, 메타데이터와 본문의 불일치, 날짜 형식과 토픽 구분자 혼재를 점검했습니다.
+데이터 생성은 ChatGPT를 통해 2026년 6월 30일에 수행했으며, 한 번에 일괄 생성하지 않고 단계적으로 진행했습니다. 첫째, 시나리오와 토픽 사전을 기준으로 면담일, 부서, 직급, 근속연수, 주 토픽, 보조 토픽, 본문을 가진 응답 초안을 만들었습니다. 둘째, 초안별로 월별 사건과의 정합성, 부서·직급별 관점, 토픽 중심성, 문체 자연성, 응답 간 반복성을 검토했습니다. 셋째, 검토 결과를 바탕으로 긍정·중립·부정 경험, 간접 관찰, 모호한 감정, 덜 정돈된 발화, 회의·메신저·고객 통화·평가 면담 같은 구체적 업무 장면을 보강했습니다. 넷째, 누적된 데이터셋 전체에서 중복·근접 중복, 날짜와 사건 월의 충돌, 메타데이터와 본문의 불일치, 날짜 형식과 보조 토픽 구분자의 일관성을 점검했습니다.
