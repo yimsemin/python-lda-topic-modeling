@@ -1,0 +1,26 @@
+# ysm 표준 Dependabot 설정. 프로젝트의 .github/dependabot.yml로 복사해서 쓴다.
+# 복사 후 다음만 고친다.
+#   1. 프로젝트에 없는 패키지 관리자 항목은 지운다(매니페스트가 없으면 Dependabot이 오류를 낸다).
+#      npm = package.json, uv = pyproject.toml + uv.lock, pip = requirements.txt,
+#      github-actions = .github/workflows/.
+#   2. 프로젝트가 develop을 쓰면 모든 항목에 `target-branch: develop`을 추가한다.
+#   3. 매니페스트가 루트가 아니면 directory를 그 폴더로 바꾼다.
+# 규칙: 매주 월요일 09:00(KST), minor·patch는 한 PR로 묶고 major는 개별 PR, 동시 PR 5개,
+# 제목 접두사는 build(의존성)·ci(Actions)로 커밋 규칙에 맞춘다.
+# 이유가 있는 예외(런타임 고정 등)만 `ignore`로 추가하고 이유를 주석으로 적는다.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Seoul
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
